@@ -32,4 +32,8 @@ class DatabaseService {
     }
     return null;
   }
+
+  Future<void> updateUserName(String uid, String name) async {
+    await _root.child('users').child(uid).update({'name': name});
+  }
 }

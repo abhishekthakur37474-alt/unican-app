@@ -1,6 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/app_settings.dart';
 import '../services/auth_service.dart';
+import '../services/verification_store.dart';
+import 'about_screen.dart';
+import 'appearance_screen.dart';
+import 'change_password_screen.dart';
+import 'notification_settings_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'profile_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -15,51 +23,77 @@ class SettingsScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Profile header
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHigh,
+          Material(
+            color: theme.colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
               borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: theme.colorScheme.primary,
-                  child: Text(
-                    (user?.displayName?.isNotEmpty == true
-                            ? user!.displayName![0]
-                            : 'U')
-                        .toUpperCase(),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimary,
-                      fontWeight: FontWeight.bold,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: theme.colorScheme.primary,
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: AppSettings.instance.displayName,
+                        builder: (context, name, child) {
+                          final initial = name.isNotEmpty
+                              ? name[0]
+                              : (user?.displayName?.isNotEmpty == true
+                                  ? user!.displayName![0]
+                                  : 'U');
+                          return Text(
+                            initial.toUpperCase(),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user?.displayName ?? 'User',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ValueListenableBuilder<String>(
+                            valueListenable: AppSettings.instance.displayName,
+                            builder: (context, name, child) {
+                              return Text(
+                                name.isEmpty
+                                    ? (user?.displayName ?? 'User')
+                                    : name,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.email ?? '',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        user?.email ?? '',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -68,13 +102,23 @@ class SettingsScreen extends StatelessWidget {
           _SettingsTile(
             icon: Icons.person_outline_rounded,
             label: 'Edit profile',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
           ),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.lock_outline_rounded,
             label: 'Change password',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+              );
+            },
           ),
           const SizedBox(height: 20),
 
@@ -82,13 +126,25 @@ class SettingsScreen extends StatelessWidget {
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
             label: 'Notifications',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationSettingsScreen(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.dark_mode_outlined,
             label: 'Appearance',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AppearanceScreen()),
+              );
+            },
           ),
           const SizedBox(height: 20),
 
@@ -96,13 +152,23 @@ class SettingsScreen extends StatelessWidget {
           _SettingsTile(
             icon: Icons.info_outline_rounded,
             label: 'About this app',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
+            },
           ),
           const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.privacy_tip_outlined,
             label: 'Privacy policy',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              );
+            },
           ),
           const SizedBox(height: 28),
 
@@ -121,6 +187,7 @@ class SettingsScreen extends StatelessWidget {
               label: const Text('Logout'),
               onPressed: () async {
                 await authService.logout();
+                VerificationStore.instance.clear();
                 if (context.mounted) {
                   Navigator.pushNamedAndRemoveUntil(
                     context,

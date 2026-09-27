@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../models/verification_case.dart';
+import '../services/app_settings.dart';
+import '../services/verification_store.dart';
 import '../theme/app_theme.dart';
 import '../verification/verification_address_screen.dart';
+import 'profile_screen.dart';
+import 'verification_list_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
+  void _open(BuildContext context, Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName ?? 'there';
     final theme = Theme.of(context);
 
     return SafeArea(
@@ -24,61 +30,78 @@ class HomeTab extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            Text(
-              name,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            ValueListenableBuilder<String>(
+              valueListenable: AppSettings.instance.displayName,
+              builder: (context, name, child) {
+                return Text(
+                  name.isEmpty ? 'there' : name,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
-
-            // Summary card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppColors.gradient,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 22,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Your dashboard',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'All synced up',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
+            ValueListenableBuilder<List<VerificationCase>>(
+              valueListenable: VerificationStore.instance.cases,
+              builder: (context, cases, child) {
+                final favorites = cases.where((e) => e.isFavorite).length;
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.gradient,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 22,
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
-                  Icon(
-                    Icons.cloud_done_rounded,
-                    color: theme.colorScheme.onPrimary,
-                    size: 40,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Your dashboard',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onPrimary
+                                  .withValues(alpha: 0.85),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${cases.length} verifications',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$favorites starred',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onPrimary
+                                  .withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(
+                        Icons.cloud_done_rounded,
+                        color: theme.colorScheme.onPrimary,
+                        size: 40,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 28),
-
             Text(
               'Quick actions',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -86,7 +109,6 @@ class HomeTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -98,29 +120,32 @@ class HomeTab extends StatelessWidget {
                 _QuickActionCard(
                   icon: Icons.fact_check_outlined,
                   label: 'Start Verification',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const VerificationAddressScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () =>
+                      _open(context, const VerificationAddressScreen()),
                 ),
                 _QuickActionCard(
                   icon: Icons.person_outline_rounded,
                   label: 'Profile',
-                  onTap: () {},
+                  onTap: () => _open(context, const ProfileScreen()),
                 ),
                 _QuickActionCard(
                   icon: Icons.bar_chart_rounded,
                   label: 'Activity',
-                  onTap: () {},
+                  onTap: () => _open(
+                    context,
+                    const VerificationListScreen(title: 'Activity'),
+                  ),
                 ),
                 _QuickActionCard(
                   icon: Icons.favorite_border_rounded,
                   label: 'Favorites',
-                  onTap: () {},
+                  onTap: () => _open(
+                    context,
+                    const VerificationListScreen(
+                      title: 'Favorites',
+                      favoritesOnly: true,
+                    ),
+                  ),
                 ),
               ],
             ),

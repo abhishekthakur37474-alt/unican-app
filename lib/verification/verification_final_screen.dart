@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 
 class VerificationFinalScreen extends StatelessWidget {
   final VerificationCase verificationCase;
@@ -124,11 +125,20 @@ class VerificationFinalScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/home',
-                    (route) => false,
-                  ),
+                  onPressed: () {
+                    final alreadySaved = VerificationStore.instance.cases.value
+                        .any((e) => e.id == c.id);
+                    VerificationStore.instance.save(c);
+                    if (alreadySaved) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/home',
+                        (route) => false,
+                      );
+                    }
+                  },
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),

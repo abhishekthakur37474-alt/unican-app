@@ -76,10 +76,32 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return;
     await user.updateDisplayName(name);
+    await _db.updateUserName(user.uid, name);
     AppSettings.instance.displayName.value = name;
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'You need to be signed in to change your password.',
+      );
+    }
+    final cred = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPassword);
   }
 
   Future<void> logout() async {
     await _auth.signOut();
+    AppSettings.instance.displayName.value = '';
   }
 }
