@@ -26,3 +26,8 @@ Date: 27-09-2026 By Abhishek thakur (Flutter app)
 - Firebase Auth
 - Device Info
 - Permissions
+
+Date: 28-09-2026 
+# Features created 
+- Staff login 
+- Notification Alert 
