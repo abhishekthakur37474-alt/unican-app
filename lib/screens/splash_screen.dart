@@ -24,10 +24,20 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final user = _authService.currentUser;
-    if (user != null) {
+    if (user == null) {
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
+    // Logged in already: re-check staff record + device id.
+    final error = await _authService.verifyDevice();
+    if (!mounted) return;
+
+    if (error == null) {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      Navigator.pushReplacementNamed(context, '/login');
+      // verifyDevice already signed the user out
+      Navigator.pushReplacementNamed(context, '/login', arguments: error);
     }
   }
 

@@ -19,7 +19,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
 
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Message passed by splash after auto-logout
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    if (arg is String && _error == null) {
+      _error = arg;
+    }
+  }
 
   @override
   void dispose() {
@@ -44,9 +55,24 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message ?? 'Login failed');
+      setState(() => _error = _friendlyError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _friendlyError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Wrong email or password.';
+      case 'user-disabled':
+        return 'This account has been disabled. Contact admin.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try again later.';
+      default:
+        return e.message ?? 'Login failed';
     }
   }
 
@@ -136,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Sign in to continue your verification work.',
+                  'Sign in with your staff account.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -152,9 +178,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passCtrl,
-                  obscureText: true,
+                  obscureText: _obscure,
                   decoration:
-                      _decoration('Password', Icons.lock_outline_rounded),
+                      _decoration('Password', Icons.lock_outline_rounded)
+                          .copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
                   validator: (v) =>
                       (v == null || v.length < 6) ? 'Min 6 characters' : null,
                 ),
@@ -198,16 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.login_rounded,
                   loading: _loading,
                   onPressed: _loading ? null : _login,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _loading
-                      ? null
-                      : () => Navigator.pushReplacementNamed(
-                            context,
-                            '/register',
-                          ),
-                  child: const Text("Don't have an account? Register"),
                 ),
               ],
             ),

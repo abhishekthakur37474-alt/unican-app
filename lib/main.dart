@@ -4,10 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings.dart';
+import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -17,6 +17,7 @@ void main() async {
   );
   AppSettings.instance.displayName.value =
       FirebaseAuth.instance.currentUser?.displayName ?? '';
+  AuthService().loadCurrentStaffName(); // fills name from staff/{uid}
   runApp(const MyApp());
 }
 
@@ -38,7 +39,6 @@ class MyApp extends StatelessWidget {
           routes: {
             '/': (context) => const SplashScreen(),
             '/login': (context) => const LoginScreen(),
-            '/register': (context) => const RegisterScreen(),
             '/home': (context) => const MainScreen(),
             '/settings': (context) => const SettingsScreen(),
           },

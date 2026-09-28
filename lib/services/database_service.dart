@@ -1,39 +1,30 @@
 import 'package:firebase_database/firebase_database.dart';
 
-/// RTDB node structure:
+/// RTDB node structure (staff created from admin panel):
 /// root
-///  └── users
+///  └── staff
 ///       └── {uid}
+///            ├── uid: String
 ///            ├── name: String
 ///            ├── email: String
-///            ├── deviceId: String
-///            └── createdAt: int (millisSinceEpoch)
+///            ├── role: String   ("staff")
+///            ├── deviceId: String (bound on first login)
+///            └── createdAt: String (ISO)
 class DatabaseService {
   final DatabaseReference _root = FirebaseDatabase.instance.ref();
 
-  Future<void> createUserNode({
-    required String uid,
-    required String name,
-    required String email,
-    required String deviceId,
-  }) async {
-    await _root.child('users').child(uid).set({
-      'name': name,
-      'email': email,
-      'deviceId': deviceId,
-      'createdAt': ServerValue.timestamp,
-    });
+  /// Returns staff record for uid, or null if not a staff member.
+  Future<Map<String, dynamic>?> getStaff(String uid) async {
+    final snap = await _root.child('staff').child(uid).get();
+    if (!snap.exists || snap.value is! Map) return null;
+    return Map<String, dynamic>.from(snap.value as Map);
   }
 
-  Future<Map<dynamic, dynamic>?> getUser(String uid) async {
-    final snap = await _root.child('users').child(uid).get();
-    if (snap.exists) {
-      return snap.value as Map<dynamic, dynamic>;
-    }
-    return null;
+  Future<void> setStaffDeviceId(String uid, String deviceId) async {
+    await _root.child('staff').child(uid).update({'deviceId': deviceId});
   }
 
-  Future<void> updateUserName(String uid, String name) async {
-    await _root.child('users').child(uid).update({'name': name});
+  Future<void> updateStaffName(String uid, String name) async {
+    await _root.child('staff').child(uid).update({'name': name});
   }
 }
