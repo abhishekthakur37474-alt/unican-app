@@ -1,11 +1,16 @@
 /// Holds all data collected across the residence verification flow.
 /// Passed by reference between screens; each screen fills in its part.
 class VerificationCase {
-  final String id = DateTime.now().microsecondsSinceEpoch.toString();
-  final DateTime createdAt = DateTime.now();
+  String id;
+  DateTime createdAt;
   bool isFavorite = false;
 
   String address;
+  String applicantName;
+  String caseId;
+  String clientName;
+  String phone;
+  String firebaseKey;
 
   double? latitude;
   double? longitude;
@@ -56,7 +61,126 @@ class VerificationCase {
   String generatedRemarks = '';
   String finalStatus = '';
 
-  VerificationCase({required this.address});
+  VerificationCase({
+    required this.address,
+    String? id,
+    DateTime? createdAt,
+    this.applicantName = '',
+    this.caseId = '',
+    this.clientName = '',
+    this.phone = '',
+    this.firebaseKey = '',
+    this.isFavorite = false,
+  })  : id = id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+        createdAt = createdAt ?? DateTime.now();
+
+  factory VerificationCase.fromMap(String id, Map<String, dynamic> map) {
+    final c = VerificationCase(
+      id: id,
+      createdAt: _asDate(map['createdAt']) ?? DateTime.now(),
+      address: _asString(map['address']),
+      applicantName: _asString(map['applicantName']),
+      caseId: _asString(map['caseId']),
+      clientName: _asString(map['clientName']),
+      phone: _asString(map['phone']),
+      firebaseKey: _asString(map['firebaseKey']),
+      isFavorite: map['isFavorite'] == true,
+    );
+    c.latitude = _asDouble(map['latitude']);
+    c.longitude = _asDouble(map['longitude']);
+    c.photoPaths.addAll(_asStringList(map['photoPaths']));
+    c.traced = map['traced'] is bool ? map['traced'] as bool : null;
+    c.reasonOfUntraced = _asString(map['reasonOfUntraced']);
+    c.requireToTrace = _asString(map['requireToTrace']);
+    c.callingResponse = _asString(map['callingResponse']);
+    c.lastLocation = _asString(map['lastLocation']);
+    c.untracedComments = _asString(map['untracedComments']);
+    c.neighbor1 = _asString(map['neighbor1']);
+    c.neighbor2 = _asString(map['neighbor2']);
+    c.neighborConfirmed =
+        map['neighborConfirmed'] is bool ? map['neighborConfirmed'] as bool : null;
+    c.metPersonName = _asString(map['metPersonName']);
+    c.relationWithApplicant = _asString(map['relationWithApplicant']);
+    c.residenceConfirmation = _asString(map['residenceConfirmation']);
+    c.tenureOfResidence = _asString(map['tenureOfResidence']);
+    c.ownershipOfResidence = _asString(map['ownershipOfResidence']);
+    c.rentAmount = _asString(map['rentAmount']);
+    c.landlordName = _asString(map['landlordName']);
+    c.buildingDescription = _asString(map['buildingDescription']);
+    c.totalFloors = _asString(map['totalFloors']);
+    c.applicantFloor = _asString(map['applicantFloor']);
+    c.landArea = _asString(map['landArea']);
+    c.localityOfAddress = _asString(map['localityOfAddress']);
+    c.documentShown = _asString(map['documentShown']);
+    c.totalFamilyMembers = _asString(map['totalFamilyMembers']);
+    c.numberOfEarners = _asString(map['numberOfEarners']);
+    c.verifierComments = _asString(map['verifierComments']);
+    c.applicantResidingThere = map['applicantResidingThere'] is bool
+        ? map['applicantResidingThere'] as bool
+        : null;
+    c.whoIsThat = _asString(map['whoIsThat']);
+    c.residenceConfirmationB2 = _asString(map['residenceConfirmationB2']);
+    c.totalFloorsB2 = _asString(map['totalFloorsB2']);
+    c.addressFloorB2 = _asString(map['addressFloorB2']);
+    c.landAreaB2 = _asString(map['landAreaB2']);
+    c.localityB2 = _asString(map['localityB2']);
+    c.commentsB2 = _asString(map['commentsB2']);
+    c.generatedRemarks = _asString(map['generatedRemarks']);
+    c.finalStatus = _asString(map['finalStatus']);
+    return c;
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'createdAt': createdAt.toIso8601String(),
+      'isFavorite': isFavorite,
+      'address': address,
+      'applicantName': applicantName,
+      'caseId': caseId,
+      'clientName': clientName,
+      'phone': phone,
+      'firebaseKey': firebaseKey,
+      'latitude': latitude,
+      'longitude': longitude,
+      'photoPaths': photoPaths,
+      'traced': traced,
+      'reasonOfUntraced': reasonOfUntraced,
+      'requireToTrace': requireToTrace,
+      'callingResponse': callingResponse,
+      'lastLocation': lastLocation,
+      'untracedComments': untracedComments,
+      'neighbor1': neighbor1,
+      'neighbor2': neighbor2,
+      'neighborConfirmed': neighborConfirmed,
+      'metPersonName': metPersonName,
+      'relationWithApplicant': relationWithApplicant,
+      'residenceConfirmation': residenceConfirmation,
+      'tenureOfResidence': tenureOfResidence,
+      'ownershipOfResidence': ownershipOfResidence,
+      'rentAmount': rentAmount,
+      'landlordName': landlordName,
+      'buildingDescription': buildingDescription,
+      'totalFloors': totalFloors,
+      'applicantFloor': applicantFloor,
+      'landArea': landArea,
+      'localityOfAddress': localityOfAddress,
+      'documentShown': documentShown,
+      'totalFamilyMembers': totalFamilyMembers,
+      'numberOfEarners': numberOfEarners,
+      'verifierComments': verifierComments,
+      'applicantResidingThere': applicantResidingThere,
+      'whoIsThat': whoIsThat,
+      'residenceConfirmationB2': residenceConfirmationB2,
+      'totalFloorsB2': totalFloorsB2,
+      'addressFloorB2': addressFloorB2,
+      'landAreaB2': landAreaB2,
+      'localityB2': localityB2,
+      'commentsB2': commentsB2,
+      'generatedRemarks': generatedRemarks,
+      'finalStatus': finalStatus,
+    };
+  }
 
   String get geoTagText => (latitude == null || longitude == null)
       ? 'Not captured'
@@ -96,4 +220,23 @@ class VerificationCase {
         'required: $requireToTrace. Calling response: $callingResponse. '
         'Last known location: $lastLocation.$_mediaSuffix';
   }
+}
+
+String _asString(dynamic value) => value?.toString() ?? '';
+
+double? _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+DateTime? _asDate(dynamic value) {
+  if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
+  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+  return null;
+}
+
+List<String> _asStringList(dynamic value) {
+  if (value is! List) return [];
+  return value.map((e) => e.toString()).toList();
 }

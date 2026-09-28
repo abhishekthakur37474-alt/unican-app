@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import '../models/assigned_address.dart';
 import '../models/verification_case.dart';
 import 'verification_widgets.dart';
 import 'verification_media_screen.dart';
 
 class VerificationAddressScreen extends StatefulWidget {
-  const VerificationAddressScreen({super.key});
+  final AssignedAddress assignedAddress;
+
+  const VerificationAddressScreen({
+    super.key,
+    required this.assignedAddress,
+  });
 
   @override
   State<VerificationAddressScreen> createState() =>
@@ -13,12 +19,22 @@ class VerificationAddressScreen extends StatefulWidget {
 
 class _VerificationAddressScreenState
     extends State<VerificationAddressScreen> {
-  // Test/dummy address to kick off the flow.
-  final _case = VerificationCase(
-    address: '221B, Sector 12, Dwarka, New Delhi - 110078',
-  );
-
+  late final VerificationCase _case;
   String? _tracedChoice;
+
+  @override
+  void initState() {
+    super.initState();
+    final assigned = widget.assignedAddress;
+    _case = VerificationCase(
+      address: assigned.fullAddress,
+      applicantName: assigned.applicantName,
+      caseId: assigned.caseId,
+      clientName: assigned.clientName,
+      phone: assigned.phone,
+      firebaseKey: assigned.id,
+    );
+  }
 
   void _next() {
     if (_tracedChoice == null) {
@@ -41,6 +57,7 @@ class _VerificationAddressScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final assigned = widget.assignedAddress;
 
     return VStepScaffold(
       title: 'Residence Verification',
@@ -48,6 +65,41 @@ class _VerificationAddressScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (assigned.applicantName.isNotEmpty || assigned.caseId.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (assigned.applicantName.isNotEmpty)
+                    Text(
+                      assigned.applicantName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  if (assigned.caseId.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      assigned.caseId,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  if (assigned.clientName.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      assigned.clientName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           Text(
             'Given Address',
             style: theme.textTheme.labelLarge?.copyWith(
@@ -64,6 +116,15 @@ class _VerificationAddressScreenState
             ),
             child: Text(_case.address, style: theme.textTheme.bodyLarge),
           ),
+          if (assigned.phone.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              assigned.phone,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           VOptionGroup(
             label: 'Was the address traced?',

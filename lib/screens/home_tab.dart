@@ -3,7 +3,7 @@ import '../models/verification_case.dart';
 import '../services/app_settings.dart';
 import '../services/verification_store.dart';
 import '../theme/app_theme.dart';
-import '../verification/verification_address_screen.dart';
+import 'assigned_addresses_screen.dart';
 import 'profile_screen.dart';
 import 'verification_list_screen.dart';
 
@@ -121,7 +121,7 @@ class HomeTab extends StatelessWidget {
                   icon: Icons.fact_check_outlined,
                   label: 'Start Verification',
                   onTap: () =>
-                      _open(context, const VerificationAddressScreen()),
+                      _open(context, const AssignedAddressesScreen()),
                 ),
                 _QuickActionCard(
                   icon: Icons.person_outline_rounded,

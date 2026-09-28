@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/app_settings.dart';
 import 'home_tab.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
@@ -11,8 +12,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _index = 0;
-
   static const _titles = ['Home', 'Notifications', 'Settings'];
 
   static const _screens = [
@@ -22,44 +21,62 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is int) {
+        AppSettings.instance.homeTabIndex.value = args;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_index]),
-        centerTitle: false,
-        backgroundColor: theme.colorScheme.surface,
-        scrolledUnderElevation: 0,
-      ),
-      body: IndexedStack(
-        index: _index,
-        children: _screens,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: theme.colorScheme.surface,
-        indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-        elevation: 3,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+    return ValueListenableBuilder<int>(
+      valueListenable: AppSettings.instance.homeTabIndex,
+      builder: (context, index, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(_titles[index]),
+            centerTitle: false,
+            backgroundColor: theme.colorScheme.surface,
+            scrolledUnderElevation: 0,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_none_rounded),
-            selectedIcon: Icon(Icons.notifications_rounded),
-            label: 'Alerts',
+          body: IndexedStack(
+            index: index,
+            children: _screens,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Settings',
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: (i) {
+              AppSettings.instance.homeTabIndex.value = i;
+            },
+            backgroundColor: theme.colorScheme.surface,
+            indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+            elevation: 3,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.notifications_none_rounded),
+                selectedIcon: Icon(Icons.notifications_rounded),
+                label: 'Alerts',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings_rounded),
+                label: 'Settings',
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

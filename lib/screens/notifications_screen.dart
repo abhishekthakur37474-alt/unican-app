@@ -1,13 +1,23 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/verification_case.dart';
+import '../models/assigned_address.dart';
+import '../models/staff_notification.dart';
 import '../services/app_settings.dart';
-import '../services/verification_store.dart';
-import '../verification/verification_final_screen.dart';
+import '../services/database_service.dart';
+import '../verification/verification_address_screen.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
-  String _timeLabel(DateTime value) {
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final DatabaseService _db = DatabaseService();
+
+  String _timeLabel(DateTime? value) {
+    if (value == null) return '';
     final now = DateTime.now();
     final diff = now.difference(value);
     if (diff.inMinutes < 1) return 'Just now';
@@ -17,40 +27,137 @@ class NotificationsScreen extends StatelessWidget {
     return '${diff.inDays}d ago';
   }
 
+  Future<void> _openNotification(StaffNotification item) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && !item.read) {
+      _db.markNotificationRead(uid, item.id);
+    }
+
+    AssignedAddress? assigned;
+    try {
+      assigned = await _db.getAssignedAddressByCaseId(item.caseId);
+    } catch (_) {}
+
+    assigned ??= AssignedAddress(
+      id: '',
+      addressLine: item.address,
+      applicantName: item.applicantName,
+      assignedToStaffEmail: '',
+      assignedToStaffId: uid ?? '',
+      assignedToStaffName: '',
+      caseId: item.caseId,
+      city: '',
+      clientName: item.clientName,
+      landmark: '',
+      phone: item.phone,
+      pincode: '',
+      priority: item.priority,
+      state: '',
+      status: 'Assigned',
+      verificationType: item.verificationType,
+    );
+
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VerificationAddressScreen(assignedAddress: assigned!),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return SafeArea(
       child: ValueListenableBuilder<bool>(
         valueListenable: AppSettings.instance.verificationAlerts,
         builder: (context, alertsEnabled, child) {
-          return ValueListenableBuilder<List<VerificationCase>>(
-            valueListenable: VerificationStore.instance.cases,
-            builder: (context, cases, child) {
-              final items = alertsEnabled ? cases : <VerificationCase>[];
+          if (!alertsEnabled) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 64,
+                    color: theme.colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Verification alerts are off',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
 
-              if (items.isEmpty) {
+          if (uid == null) {
+            return Center(
+              child: Text(
+                'Sign in to see alerts',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            );
+          }
+
+          return StreamBuilder<List<StaffNotification>>(
+            stream: _db.watchStaffNotifications(uid),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.notifications_none_rounded,
+                        Icons.cloud_off_outlined,
                         size: 64,
                         color: theme.colorScheme.outline,
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        alertsEnabled
-                            ? 'No notifications yet'
-                            : 'Verification alerts are off',
+                        'Could not load notifications',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
+                );
+              }
+
+              final items = snapshot.data ?? [];
+              if (items.isEmpty) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                    Icon(
+                      Icons.notifications_none_rounded,
+                      size: 64,
+                      color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No notifications yet',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 );
               }
 
@@ -61,20 +168,14 @@ class NotificationsScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return Material(
-                    color: theme.colorScheme.surfaceContainerHigh,
+                    color: item.read
+                        ? theme.colorScheme.surfaceContainerHigh
+                        : theme.colorScheme.primaryContainer
+                            .withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => VerificationFinalScreen(
-                              verificationCase: item,
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => _openNotification(item),
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: Row(
@@ -84,7 +185,7 @@ class NotificationsScreen extends StatelessWidget {
                               backgroundColor: theme.colorScheme.primary
                                   .withValues(alpha: 0.15),
                               child: Icon(
-                                Icons.check_circle_outline_rounded,
+                                Icons.assignment_outlined,
                                 color: theme.colorScheme.primary,
                               ),
                             ),
@@ -94,11 +195,13 @@ class NotificationsScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    item.finalStatus.isEmpty
-                                        ? 'Verification completed'
-                                        : item.finalStatus,
+                                    item.message.isEmpty
+                                        ? 'New verification assigned'
+                                        : item.message,
                                     style: theme.textTheme.bodyLarge?.copyWith(
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: item.read
+                                          ? FontWeight.w500
+                                          : FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -110,7 +213,7 @@ class NotificationsScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    _timeLabel(item.createdAt),
+                                    _timeLabel(item.timestamp),
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.outline,
                                     ),

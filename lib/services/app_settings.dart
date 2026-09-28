@@ -11,4 +11,6 @@ class AppSettings {
   final ValueNotifier<bool> verificationAlerts = ValueNotifier<bool>(true);
   final ValueNotifier<bool> reminderAlerts = ValueNotifier<bool>(true);
   final ValueNotifier<bool> soundAlerts = ValueNotifier<bool>(true);
+  final ValueNotifier<int> homeTabIndex = ValueNotifier<int>(0);
+  final ValueNotifier<int> alertsRefreshTick = ValueNotifier<int>(0);
 }

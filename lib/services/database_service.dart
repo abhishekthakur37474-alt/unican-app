@@ -1,15 +1,13 @@
 import 'package:firebase_database/firebase_database.dart';
+import '../models/assigned_address.dart';
+import '../models/staff_notification.dart';
+import '../models/verification_case.dart';
 
-/// RTDB node structure (staff created from admin panel):
+/// RTDB node structure:
 /// root
-///  └── staff
-///       └── {uid}
-///            ├── uid: String
-///            ├── name: String
-///            ├── email: String
-///            ├── role: String   ("staff")
-///            ├── deviceId: String (bound on first login)
-///            └── createdAt: String (ISO)
+///  ├── staff/{uid}
+///  ├── staff_notifications/{uid}/{id}
+///  └── verification_addresses/{id}
 class DatabaseService {
   final DatabaseReference _root = FirebaseDatabase.instance.ref();
 
@@ -26,5 +24,181 @@ class DatabaseService {
 
   Future<void> updateStaffName(String uid, String name) async {
     await _root.child('staff').child(uid).update({'name': name});
+  }
+
+  Future<void> setStaffFcmToken(String uid, String token) async {
+    await _root.child('staff').child(uid).update({
+      'fcmToken': token,
+      'fcmTokenUpdatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> clearStaffFcmToken(String uid) async {
+    await _root.child('staff').child(uid).update({'fcmToken': null});
+  }
+
+  Future<List<AssignedAddress>> getAssignedAddresses(String staffId) async {
+    final snap = await _root.child('verification_addresses').get();
+    if (!snap.exists || snap.value is! Map) return [];
+
+    final items = <AssignedAddress>[];
+    for (final child in snap.children) {
+      if (child.value is! Map) continue;
+      final map = Map<String, dynamic>.from(child.value as Map);
+      final item = AssignedAddress.fromMap(child.key ?? '', map);
+      if (item.assignedToStaffId == staffId && item.isOpen) {
+        items.add(item);
+      }
+    }
+
+    items.sort((a, b) {
+      final aTime = a.assignedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = b.assignedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+    return items;
+  }
+
+  Future<List<StaffNotification>> getStaffNotifications(String staffId) async {
+    final snap = await _root.child('staff_notifications').child(staffId).get();
+    if (!snap.exists || snap.value is! Map) return [];
+
+    final items = <StaffNotification>[];
+    for (final child in snap.children) {
+      if (child.value is! Map) continue;
+      items.add(
+        StaffNotification.fromMap(
+          child.key ?? '',
+          Map<String, dynamic>.from(child.value as Map),
+        ),
+      );
+    }
+
+    items.sort((a, b) {
+      final aTime = a.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = b.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+    return items;
+  }
+
+  Future<AssignedAddress?> getAssignedAddressByCaseId(String caseId) async {
+    if (caseId.isEmpty) return null;
+    final snap = await _root.child('verification_addresses').get();
+    if (!snap.exists || snap.value is! Map) return null;
+
+    for (final child in snap.children) {
+      if (child.value is! Map) continue;
+      final map = Map<String, dynamic>.from(child.value as Map);
+      final item = AssignedAddress.fromMap(child.key ?? '', map);
+      if (item.caseId == caseId) return item;
+    }
+    return null;
+  }
+
+  Future<void> markNotificationRead(String staffId, String notificationId) async {
+    await _root
+        .child('staff_notifications')
+        .child(staffId)
+        .child(notificationId)
+        .update({'read': true});
+  }
+
+  Future<void> updateAddressStatus(String addressId, String status) async {
+    if (addressId.isEmpty) return;
+    await _root.child('verification_addresses').child(addressId).update({
+      'status': status,
+    });
+  }
+
+  Stream<List<StaffNotification>> watchStaffNotifications(String staffId) {
+    return _root.child('staff_notifications').child(staffId).onValue.map((event) {
+      final snap = event.snapshot;
+      if (!snap.exists || snap.value is! Map) return <StaffNotification>[];
+
+      final items = <StaffNotification>[];
+      for (final child in snap.children) {
+        if (child.value is! Map) continue;
+        items.add(
+          StaffNotification.fromMap(
+            child.key ?? '',
+            Map<String, dynamic>.from(child.value as Map),
+          ),
+        );
+      }
+      items.sort((a, b) {
+        final aTime = a.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime = b.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+      return items;
+    });
+  }
+
+  Stream<List<AssignedAddress>> watchAssignedAddresses(String staffId) {
+    return _root.child('verification_addresses').onValue.map((event) {
+      final snap = event.snapshot;
+      if (!snap.exists || snap.value is! Map) return <AssignedAddress>[];
+
+      final items = <AssignedAddress>[];
+      for (final child in snap.children) {
+        if (child.value is! Map) continue;
+        final item = AssignedAddress.fromMap(
+          child.key ?? '',
+          Map<String, dynamic>.from(child.value as Map),
+        );
+        if (item.assignedToStaffId == staffId && item.isOpen) {
+          items.add(item);
+        }
+      }
+      items.sort((a, b) {
+        final aTime =
+            a.assignedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime =
+            b.assignedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+      return items;
+    });
+  }
+
+  Stream<List<VerificationCase>> watchCompletedCases(String staffId) {
+    return _root.child('staff_verifications').child(staffId).onValue.map((event) {
+      final snap = event.snapshot;
+      if (!snap.exists || snap.value is! Map) return <VerificationCase>[];
+
+      final items = <VerificationCase>[];
+      for (final child in snap.children) {
+        if (child.value is! Map) continue;
+        items.add(
+          VerificationCase.fromMap(
+            child.key ?? '',
+            Map<String, dynamic>.from(child.value as Map),
+          ),
+        );
+      }
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return items;
+    });
+  }
+
+  Future<void> saveCompletedCase(String staffId, VerificationCase value) async {
+    await _root
+        .child('staff_verifications')
+        .child(staffId)
+        .child(value.id)
+        .set(value.toMap());
+  }
+
+  Future<void> updateCaseFavorite(
+    String staffId,
+    String caseId,
+    bool isFavorite,
+  ) async {
+    await _root
+        .child('staff_verifications')
+        .child(staffId)
+        .child(caseId)
+        .update({'isFavorite': isFavorite});
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/app_settings.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
@@ -34,7 +35,11 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (error == null) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: AppSettings.instance.homeTabIndex.value,
+      );
     } else {
       // verifyDevice already signed the user out
       Navigator.pushReplacementNamed(context, '/login', arguments: error);

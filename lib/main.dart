@@ -8,6 +8,8 @@ import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings.dart';
 import 'services/auth_service.dart';
+import 'services/fcm_service.dart';
+import 'services/verification_store.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -15,9 +17,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await FcmService.instance.init();
   AppSettings.instance.displayName.value =
       FirebaseAuth.instance.currentUser?.displayName ?? '';
-  AuthService().loadCurrentStaffName(); // fills name from staff/{uid}
+  AuthService().loadCurrentStaffName();
+  if (FirebaseAuth.instance.currentUser != null) {
+    VerificationStore.instance.start();
+  }
   runApp(const MyApp());
 }
 
