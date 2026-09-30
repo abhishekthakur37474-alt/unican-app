@@ -8,7 +8,9 @@ import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings.dart';
 import 'services/auth_service.dart';
-import 'services/fcm_service.dart';
+import 'services/notification_router.dart';
+import 'services/notification_store.dart';
+import 'services/push_service.dart';
 import 'services/verification_store.dart';
 import 'theme/app_theme.dart';
 
@@ -17,12 +19,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await FcmService.instance.init();
+  await PushService.instance.init();
   AppSettings.instance.displayName.value =
       FirebaseAuth.instance.currentUser?.displayName ?? '';
   AuthService().loadCurrentStaffName();
   if (FirebaseAuth.instance.currentUser != null) {
     VerificationStore.instance.start();
+    NotificationStore.instance.start();
   }
   runApp(const MyApp());
 }
@@ -37,6 +40,7 @@ class MyApp extends StatelessWidget {
       builder: (context, mode, child) {
         return MaterialApp(
           title: 'Unican',
+          navigatorKey: NotificationRouter.navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),

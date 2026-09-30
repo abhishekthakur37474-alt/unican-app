@@ -2,7 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'app_settings.dart';
 import 'database_service.dart';
 import 'device_service.dart';
-import 'fcm_service.dart';
+import 'notification_store.dart';
+import 'push_service.dart';
 import 'verification_store.dart';
 
 /// Staff accounts are created from the admin panel (Auth + RTDB `staff/{uid}`).
@@ -76,8 +77,9 @@ class AuthService {
 
     AppSettings.instance.displayName.value =
         (staff['name'] as String?) ?? user.displayName ?? '';
-    await FcmService.instance.registerCurrentUser();
+    await PushService.instance.registerCurrentUser();
     VerificationStore.instance.start();
+    NotificationStore.instance.start();
     return user;
   }
 
@@ -117,8 +119,9 @@ class AuthService {
 
     AppSettings.instance.displayName.value =
         (staff['name'] as String?) ?? user.displayName ?? '';
-    await FcmService.instance.registerCurrentUser();
+    await PushService.instance.registerCurrentUser();
     VerificationStore.instance.start();
+    NotificationStore.instance.start();
     return null;
   }
 
@@ -169,9 +172,10 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      await FcmService.instance.clearCurrentUser();
+      await PushService.instance.clearCurrentUser();
     } catch (_) {}
     VerificationStore.instance.stop();
+    NotificationStore.instance.stop();
     await _auth.signOut();
     AppSettings.instance.displayName.value = '';
     AppSettings.instance.homeTabIndex.value = 0;

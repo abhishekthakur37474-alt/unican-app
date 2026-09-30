@@ -26,15 +26,15 @@ class DatabaseService {
     await _root.child('staff').child(uid).update({'name': name});
   }
 
-  Future<void> setStaffFcmToken(String uid, String token) async {
+  Future<void> setStaffOneSignalId(String uid, String id) async {
     await _root.child('staff').child(uid).update({
-      'fcmToken': token,
-      'fcmTokenUpdatedAt': DateTime.now().toIso8601String(),
+      'oneSignalId': id,
+      'oneSignalIdUpdatedAt': DateTime.now().toIso8601String(),
     });
   }
 
-  Future<void> clearStaffFcmToken(String uid) async {
-    await _root.child('staff').child(uid).update({'fcmToken': null});
+  Future<void> clearStaffOneSignalId(String uid) async {
+    await _root.child('staff').child(uid).update({'oneSignalId': null});
   }
 
   Future<List<AssignedAddress>> getAssignedAddresses(String staffId) async {
@@ -80,6 +80,16 @@ class DatabaseService {
       return bTime.compareTo(aTime);
     });
     return items;
+  }
+
+  Future<AssignedAddress?> getAssignedAddressById(String addressId) async {
+    if (addressId.isEmpty) return null;
+    final snap = await _root.child('verification_addresses').child(addressId).get();
+    if (!snap.exists || snap.value is! Map) return null;
+    return AssignedAddress.fromMap(
+      addressId,
+      Map<String, dynamic>.from(snap.value as Map),
+    );
   }
 
   Future<AssignedAddress?> getAssignedAddressByCaseId(String caseId) async {

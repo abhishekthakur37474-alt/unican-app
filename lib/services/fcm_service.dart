@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../firebase_options.dart';
 import 'app_settings.dart';
 import 'database_service.dart';
+import 'notification_router.dart';
 
 const _androidChannelId = 'unican_assignments';
 const _androidChannelName = 'Verification assignments';
@@ -30,7 +32,7 @@ class FcmService {
 
   bool _initialized = false;
 
-  bool get _supported => Platform.isAndroid;
+  bool get _supported => Platform.isAndroid || Platform.isIOS;
 
   Future<void> init() async {
     if (!_supported || _initialized) return;
@@ -42,11 +44,13 @@ class FcmService {
     await _requestPermission();
 
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-    FirebaseMessaging.onMessageOpenedApp.listen((_) => openAlertsTab());
+    FirebaseMessaging.onMessageOpenedApp.listen(
+      (message) => NotificationRouter.instance.handleData(message.data),
+    );
 
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {
-      openAlertsTab();
+      NotificationRouter.instance.handleData(initial.data);
     }
 
     _messaging.onTokenRefresh.listen(_saveToken);
@@ -81,15 +85,16 @@ class FcmService {
 
   Future<void> _initLocalNotifications() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: android);
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const settings = InitializationSettings(android: android, iOS: ios);
 
     await _local.initialize(
       settings,
-      onDidReceiveNotificationResponse: (response) {
-        if (response.payload == _openAlertsPayload) {
-          openAlertsTab();
-        }
-      },
+      onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
     const channel = AndroidNotificationChannel(
@@ -106,10 +111,35 @@ class FcmService {
   }
 
   Future<void> _requestPermission() async {
+    // iOS + Android 13+ (no-op prompt on older Android).
+    await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
     await _local
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+  }
+
+  void _onNotificationTap(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+
+    if (payload == _openAlertsPayload) {
+      openAlertsTab();
+      return;
+    }
+
+    try {
+      final data = jsonDecode(payload);
+      if (data is Map) {
+        NotificationRouter.instance.handleData(Map<String, dynamic>.from(data));
+      }
+    } catch (_) {
+      openAlertsTab();
+    }
   }
 
   Future<void> _saveToken(String token) async {
@@ -119,6 +149,8 @@ class FcmService {
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    if (!AppSettings.instance.verificationAlerts.value) return;
+
     final notification = message.notification;
     final title = notification?.title ??
         message.data['title'] ??
@@ -128,8 +160,14 @@ class FcmService {
         message.data['message'] ??
         'Open Alerts to view the assigned address';
 
+    final rawId =
+        (message.data['notificationId'] ?? message.messageId ?? '').toString();
+    final id = rawId.isNotEmpty
+        ? rawId.hashCode & 0x7fffffff
+        : message.hashCode & 0x7fffffff;
+
     await _local.show(
-      message.hashCode,
+      id,
       title,
       body,
       const NotificationDetails(
@@ -141,8 +179,14 @@ class FcmService {
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
         ),
+        iOS: DarwinNotificationDetails(),
       ),
-      payload: _openAlertsPayload,
+      payload: jsonEncode(<String, dynamic>{
+        'type': message.data['type'],
+        'caseId': message.data['caseId'],
+        'addressId': message.data['addressId'],
+        'notificationId': message.data['notificationId'],
+      }),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/app_settings.dart';
+import '../services/notification_router.dart';
+import '../services/notification_store.dart';
 import 'home_tab.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
@@ -28,6 +30,8 @@ class _MainScreenState extends State<MainScreen> {
       if (args is int) {
         AppSettings.instance.homeTabIndex.value = args;
       }
+      // Open a case tapped from an FCM notification once we're signed in.
+      NotificationRouter.instance.flushPending();
     });
   }
 
@@ -49,34 +53,62 @@ class _MainScreenState extends State<MainScreen> {
             index: index,
             children: _screens,
           ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: index,
-            onDestinationSelected: (i) {
-              AppSettings.instance.homeTabIndex.value = i;
+          bottomNavigationBar: ValueListenableBuilder<int>(
+            valueListenable: NotificationStore.instance.unreadCount,
+            builder: (context, unread, child) {
+              return NavigationBar(
+                selectedIndex: index,
+                onDestinationSelected: (i) {
+                  AppSettings.instance.homeTabIndex.value = i;
+                },
+                backgroundColor: theme.colorScheme.surface,
+                indicatorColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.15),
+                elevation: 3,
+                destinations: [
+                  const NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: _AlertsIcon(
+                      unread: unread,
+                      icon: Icons.notifications_none_rounded,
+                    ),
+                    selectedIcon: _AlertsIcon(
+                      unread: unread,
+                      icon: Icons.notifications_rounded,
+                    ),
+                    label: 'Alerts',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings_rounded),
+                    label: 'Settings',
+                  ),
+                ],
+              );
             },
-            backgroundColor: theme.colorScheme.surface,
-            indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-            elevation: 3,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.notifications_none_rounded),
-                selectedIcon: Icon(Icons.notifications_rounded),
-                label: 'Alerts',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded),
-                label: 'Settings',
-              ),
-            ],
           ),
         );
       },
+    );
+  }
+}
+
+class _AlertsIcon extends StatelessWidget {
+  final int unread;
+  final IconData icon;
+
+  const _AlertsIcon({required this.unread, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    if (unread <= 0) return Icon(icon);
+    return Badge.count(
+      count: unread,
+      child: Icon(icon),
     );
   }
 }
