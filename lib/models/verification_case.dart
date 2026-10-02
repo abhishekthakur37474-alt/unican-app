@@ -15,6 +15,8 @@ class VerificationCase {
   double? latitude;
   double? longitude;
   final List<String> photoPaths = [];
+  /// Hosted (imgbb) URLs for the captured photos. Filled during cloud sync.
+  final List<String> photoUrls = [];
 
   bool? traced; // true = Traced, false = Untraced
 
@@ -89,6 +91,7 @@ class VerificationCase {
     c.latitude = _asDouble(map['latitude']);
     c.longitude = _asDouble(map['longitude']);
     c.photoPaths.addAll(_asStringList(map['photoPaths']));
+    c.photoUrls.addAll(_asStringList(map['photoUrls']));
     c.traced = map['traced'] is bool ? map['traced'] as bool : null;
     c.reasonOfUntraced = _asString(map['reasonOfUntraced']);
     c.requireToTrace = _asString(map['requireToTrace']);
@@ -144,6 +147,7 @@ class VerificationCase {
       'latitude': latitude,
       'longitude': longitude,
       'photoPaths': photoPaths,
+      'photoUrls': photoUrls,
       'traced': traced,
       'reasonOfUntraced': reasonOfUntraced,
       'requireToTrace': requireToTrace,
@@ -185,6 +189,14 @@ class VerificationCase {
   String get geoTagText => (latitude == null || longitude == null)
       ? 'Not captured'
       : '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}';
+
+  /// Stable local identifier for a case: prefers the assigned address key so
+  /// drafts and the offline sync queue can be matched back to the same case.
+  String get localKey {
+    if (firebaseKey.isNotEmpty) return firebaseKey;
+    if (caseId.isNotEmpty) return caseId;
+    return id;
+  }
 
   String get _mediaSuffix =>
       '\n\nGeo-tag: $geoTagText. Photos attached: ${photoPaths.length}.';

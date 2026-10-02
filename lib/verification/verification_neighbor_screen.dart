@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_confirmed_screen.dart';
 import 'verification_not_confirmed_screen.dart';
@@ -20,6 +21,17 @@ class _VerificationNeighborScreenState
   final _n2Ctrl = TextEditingController();
   String? _confirmedChoice;
 
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.verificationCase;
+    _n1Ctrl.text = c.neighbor1;
+    _n2Ctrl.text = c.neighbor2;
+    _confirmedChoice = c.neighborConfirmed == null
+        ? null
+        : (c.neighborConfirmed! ? 'Confirmed' : 'Not confirmed');
+  }
+
   void _next() {
     if (_confirmedChoice == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,6 +44,8 @@ class _VerificationNeighborScreenState
     c.neighbor1 = _n1Ctrl.text;
     c.neighbor2 = _n2Ctrl.text;
     c.neighborConfirmed = _confirmedChoice == 'Confirmed';
+
+    VerificationStore.instance.saveDraft(c, c.neighborConfirmed! ? 4 : 6);
 
     Navigator.push(
       context,

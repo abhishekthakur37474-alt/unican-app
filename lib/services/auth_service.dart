@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'app_settings.dart';
 import 'database_service.dart';
 import 'device_service.dart';
 import 'notification_store.dart';
 import 'push_service.dart';
+import 'sync_service.dart';
 import 'verification_store.dart';
 
 /// Staff accounts are created from the admin panel (Auth + RTDB `staff/{uid}`).
@@ -77,25 +80,35 @@ class AuthService {
 
     AppSettings.instance.displayName.value =
         (staff['name'] as String?) ?? user.displayName ?? '';
-    await PushService.instance.registerCurrentUser();
+    unawaited(PushService.instance.registerCurrentUser());
     VerificationStore.instance.start();
     NotificationStore.instance.start();
+    SyncService.instance.syncNow();
     return user;
   }
 
   /// Call on app start when a session already exists.
   /// Returns null if ok. Returns error message (and signs out) if the
   /// account is no longer valid staff or device differs from saved one.
-  /// Network error / timeout -> keep session (returns null).
+  /// Network error / timeout / offline -> keep session (returns null).
   Future<String?> verifyDevice() async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
+    // Offline: trust the cached Firebase session and start local features
+    // immediately instead of blocking the splash on a network round-trip.
+    if (!SyncService.instance.online.value) {
+      _startLocalSession(user);
+      return null;
+    }
+
     Map<String, dynamic>? staff;
     try {
-      staff = await _db.getStaff(user.uid).timeout(const Duration(seconds: 10));
+      staff = await _db.getStaff(user.uid).timeout(const Duration(seconds: 8));
     } catch (_) {
-      return null; // offline: don't lock user out
+      // Network error / timeout: keep the session, don't lock the user out.
+      _startLocalSession(user);
+      return null;
     }
 
     if (staff == null || staff['role'] != 'staff') {
@@ -109,6 +122,7 @@ class AuthService {
       try {
         currentDeviceId = await _deviceService.getDeviceId();
       } catch (_) {
+        _startLocalSession(user, name: staff['name'] as String?);
         return null;
       }
       if (savedDeviceId != currentDeviceId) {
@@ -117,18 +131,31 @@ class AuthService {
       }
     }
 
-    AppSettings.instance.displayName.value =
-        (staff['name'] as String?) ?? user.displayName ?? '';
-    await PushService.instance.registerCurrentUser();
+    _startLocalSession(user, name: staff['name'] as String?);
+    return null;
+  }
+
+  /// Starts realtime listeners and push registration without waiting on the
+  /// network, so the UI is usable both online and offline.
+  void _startLocalSession(User user, {String? name}) {
+    final resolved = name ?? user.displayName;
+    if (resolved != null && resolved.isNotEmpty) {
+      AppSettings.instance.displayName.value = resolved;
+    }
     VerificationStore.instance.start();
     NotificationStore.instance.start();
-    return null;
+    unawaited(PushService.instance.registerCurrentUser());
+    SyncService.instance.syncNow();
   }
 
   /// Load staff name into AppSettings for already-signed-in user (app start).
   Future<void> loadCurrentStaffName() async {
     final user = _auth.currentUser;
     if (user == null) return;
+    if (!SyncService.instance.online.value) {
+      AppSettings.instance.displayName.value = user.displayName ?? '';
+      return;
+    }
     try {
       final staff = await _db.getStaff(user.uid);
       AppSettings.instance.displayName.value =
@@ -172,8 +199,12 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      await PushService.instance.clearCurrentUser();
+      await SyncService.instance.syncNow();
     } catch (_) {}
+    // Best-effort push cleanup; never let it delay sign-out when offline.
+    unawaited(
+      PushService.instance.clearCurrentUser().catchError((Object _) {}),
+    );
     VerificationStore.instance.stop();
     NotificationStore.instance.stop();
     await _auth.signOut();

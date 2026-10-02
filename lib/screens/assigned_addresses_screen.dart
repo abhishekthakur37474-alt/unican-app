@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/assigned_address.dart';
 import '../services/database_service.dart';
+import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
 import '../verification/verification_address_screen.dart';
 
@@ -28,6 +29,13 @@ class AssignedAddressesScreen extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
+                    if (!SyncService.instance.online.value) {
+                      return const _EmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'You are offline',
+                        subtitle: 'Reconnect to load assigned addresses',
+                      );
+                    }
                     return const Center(child: CircularProgressIndicator());
                   }
 

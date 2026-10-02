@@ -30,8 +30,12 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    // Logged in already: re-check staff record + device id.
-    final error = await _authService.verifyDevice();
+    // Logged in already: re-check staff record + device id. Guard with a
+    // timeout so a flaky/offline network can never trap the user on splash.
+    final error = await _authService.verifyDevice().timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => null,
+        );
     if (!mounted) return;
 
     if (error == null) {

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
@@ -11,6 +14,7 @@ import 'services/auth_service.dart';
 import 'services/notification_router.dart';
 import 'services/notification_store.dart';
 import 'services/push_service.dart';
+import 'services/sync_service.dart';
 import 'services/verification_store.dart';
 import 'theme/app_theme.dart';
 
@@ -19,10 +23,25 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await PushService.instance.init();
+
+  // Keep a local RTDB cache so assigned addresses and notifications stay
+  // readable while offline. Must run before the first database reference.
+  unawaited(
+    FirebaseDatabase.instance
+        .setPersistenceEnabled(true)
+        .catchError((Object _) {}),
+  );
+
+  // Local storage + connectivity listener: no network needed, must finish
+  // before the first frame so offline drafts are available.
+  await SyncService.instance.init();
+
+  // Push setup talks to OneSignal; never block the UI on it.
+  unawaited(PushService.instance.init().catchError((Object _) {}));
+
   AppSettings.instance.displayName.value =
       FirebaseAuth.instance.currentUser?.displayName ?? '';
-  AuthService().loadCurrentStaffName();
+  unawaited(AuthService().loadCurrentStaffName());
   if (FirebaseAuth.instance.currentUser != null) {
     VerificationStore.instance.start();
     NotificationStore.instance.start();

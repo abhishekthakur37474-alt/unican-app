@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/app_settings.dart';
+import '../services/sync_service.dart';
 import '../services/verification_store.dart';
 import '../theme/app_theme.dart';
 import 'assigned_addresses_screen.dart';
@@ -97,6 +98,43 @@ class HomeTab extends StatelessWidget {
                         size: 40,
                       ),
                     ],
+                  ),
+                );
+              },
+            ),
+            ValueListenableBuilder<int>(
+              valueListenable: SyncService.instance.pendingCount,
+              builder: (context, pending, child) {
+                if (pending == 0) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '$pending verification${pending == 1 ? '' : 's'} '
+                            'pending sync. Will upload automatically when online.',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

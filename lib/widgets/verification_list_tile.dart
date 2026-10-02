@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/sync_service.dart';
 import '../services/verification_store.dart';
 
 class VerificationListTile extends StatelessWidget {
@@ -69,6 +70,15 @@ class VerificationListTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (SyncService.instance.isPending(item.localKey))
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(
+                    Icons.cloud_off_rounded,
+                    size: 18,
+                    color: Colors.orange,
+                  ),
+                ),
               IconButton(
                 tooltip: item.isFavorite
                     ? 'Remove from favorites'

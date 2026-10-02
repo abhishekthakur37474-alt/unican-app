@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/location_service.dart';
 import '../services/media_service.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_neighbor_screen.dart';
 import 'verification_untraced_screen.dart';
@@ -78,6 +79,9 @@ class _VerificationMediaScreenState extends State<VerificationMediaScreen> {
       );
       return;
     }
+
+    // Media captured: resume into the neighbor/untraced step.
+    VerificationStore.instance.saveDraft(_case, _case.traced! ? 3 : 7);
 
     Navigator.push(
       context,

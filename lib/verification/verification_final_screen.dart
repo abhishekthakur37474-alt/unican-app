@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
-import '../services/database_service.dart';
 import '../services/verification_store.dart';
 
 class VerificationFinalScreen extends StatelessWidget {
@@ -129,13 +128,7 @@ class VerificationFinalScreen extends StatelessWidget {
                   onPressed: () async {
                     final alreadySaved = VerificationStore.instance.cases.value
                         .any((e) => e.id == c.id);
-                    VerificationStore.instance.save(c);
-                    if (c.firebaseKey.isNotEmpty) {
-                      try {
-                        await DatabaseService()
-                            .updateAddressStatus(c.firebaseKey, 'Completed');
-                      } catch (_) {}
-                    }
+                    await VerificationStore.instance.save(c);
                     if (!context.mounted) return;
                     if (alreadySaved) {
                       Navigator.pop(context);

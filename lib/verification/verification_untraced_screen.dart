@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_final_screen.dart';
 
@@ -21,6 +22,19 @@ class _VerificationUntracedScreenState
   final _lastLocationCtrl = TextEditingController();
   final _commentsCtrl = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.verificationCase;
+    _reason = _opt(c.reasonOfUntraced);
+    _requireToTrace = _opt(c.requireToTrace);
+    _callingResponse = _opt(c.callingResponse);
+    _lastLocationCtrl.text = c.lastLocation;
+    _commentsCtrl.text = c.untracedComments;
+  }
+
+  String? _opt(String value) => value.isEmpty ? null : value;
+
   void _next() {
     final c = widget.verificationCase;
     c.reasonOfUntraced = _reason ?? '';
@@ -30,6 +44,8 @@ class _VerificationUntracedScreenState
     c.untracedComments = _commentsCtrl.text;
     c.generatedRemarks = c.buildUntracedRemarks();
     c.finalStatus = 'Untraced';
+
+    VerificationStore.instance.saveDraft(c, 7);
 
     Navigator.push(
       context,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_residing_screen.dart';
 
@@ -32,6 +33,30 @@ class _VerificationConfirmedScreenState
   String? _earners;
   final _commentsCtrl = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.verificationCase;
+    _metPersonCtrl.text = c.metPersonName;
+    _relation = _opt(c.relationWithApplicant);
+    _residenceConfirmation = _opt(c.residenceConfirmation);
+    _tenureCtrl.text = c.tenureOfResidence;
+    _ownership = _opt(c.ownershipOfResidence);
+    _rentCtrl.text = c.rentAmount;
+    _landlordCtrl.text = c.landlordName;
+    _building = _opt(c.buildingDescription);
+    _totalFloors = _opt(c.totalFloors);
+    _applicantFloor = _opt(c.applicantFloor);
+    _landAreaCtrl.text = c.landArea;
+    _locality = _opt(c.localityOfAddress);
+    _document = _opt(c.documentShown);
+    _familyMembers = _opt(c.totalFamilyMembers);
+    _earners = _opt(c.numberOfEarners);
+    _commentsCtrl.text = c.verifierComments;
+  }
+
+  String? _opt(String value) => value.isEmpty ? null : value;
+
   void _next() {
     final c = widget.verificationCase;
     c.metPersonName = _metPersonCtrl.text;
@@ -50,6 +75,8 @@ class _VerificationConfirmedScreenState
     c.totalFamilyMembers = _familyMembers ?? '';
     c.numberOfEarners = _earners ?? '';
     c.verifierComments = _commentsCtrl.text;
+
+    VerificationStore.instance.saveDraft(c, 5);
 
     Navigator.push(
       context,

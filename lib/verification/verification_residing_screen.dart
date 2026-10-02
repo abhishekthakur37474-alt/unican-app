@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_final_screen.dart';
 
@@ -17,6 +18,13 @@ class _VerificationResidingScreenState
     extends State<VerificationResidingScreen> {
   String? _choice;
 
+  @override
+  void initState() {
+    super.initState();
+    final residing = widget.verificationCase.applicantResidingThere;
+    _choice = residing == null ? null : (residing ? 'Yes' : 'No');
+  }
+
   void _next() {
     if (_choice == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -31,6 +39,8 @@ class _VerificationResidingScreenState
     c.finalStatus = c.applicantResidingThere!
         ? 'Traced — Confirmed — Residing'
         : 'Traced — Confirmed — Not Residing';
+
+    VerificationStore.instance.saveDraft(c, 5);
 
     Navigator.push(
       context,

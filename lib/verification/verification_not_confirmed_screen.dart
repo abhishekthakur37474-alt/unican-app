@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
+import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_final_screen.dart';
 
@@ -24,6 +25,22 @@ class _VerificationNotConfirmedScreenState
   String? _locality;
   final _commentsCtrl = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    final c = widget.verificationCase;
+    _metPersonCtrl.text = c.metPersonName;
+    _whoIsThat = _opt(c.whoIsThat);
+    _residenceConfirmation = _opt(c.residenceConfirmationB2);
+    _totalFloors = _opt(c.totalFloorsB2);
+    _addressFloor = _opt(c.addressFloorB2);
+    _landAreaCtrl.text = c.landAreaB2;
+    _locality = _opt(c.localityB2);
+    _commentsCtrl.text = c.commentsB2;
+  }
+
+  String? _opt(String value) => value.isEmpty ? null : value;
+
   void _next() {
     final c = widget.verificationCase;
     c.metPersonName = _metPersonCtrl.text;
@@ -36,6 +53,8 @@ class _VerificationNotConfirmedScreenState
     c.commentsB2 = _commentsCtrl.text;
     c.generatedRemarks = c.buildNotConfirmedRemarks();
     c.finalStatus = 'Traced — Not Confirmed';
+
+    VerificationStore.instance.saveDraft(c, 6);
 
     Navigator.push(
       context,
