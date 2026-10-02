@@ -11,7 +11,8 @@ import 'notification_router.dart';
 const _oneSignalAppId = 'f5e99edf-0039-4e79-890f-d34d6753db0d';
 
 /// Device push via OneSignal. The signed-in staff uid is set as the
-/// OneSignal External ID so the admin can target it without storing tokens.
+/// OneSignal External ID, and the subscription id is saved to
+/// `staff/{uid}/oneSignalId` so the admin can target either one.
 class PushService {
   PushService._();
 
@@ -27,30 +28,67 @@ class PushService {
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
+  void _log(String msg) {
+    // ignore: avoid_print
+    print('[PushService] $msg');
+  }
+
   Future<void> init() async {
+    _log('init() called, supported=$_supported, alreadyInit=$_initialized');
     if (!_supported || _initialized) return;
     _initialized = true;
 
     OneSignal.initialize(_oneSignalAppId);
+    _log('OneSignal.initialize done, appId=$_oneSignalAppId');
     _attachListeners();
     _observeSubscription();
 
-    await OneSignal.Notifications.requestPermission(false);
+    // true = send user to app settings if permission was denied earlier.
+    final granted = await OneSignal.Notifications.requestPermission(true);
+    _log('notification permission granted: $granted');
   }
 
   /// Called on login and on app start when a session already exists.
   Future<void> registerCurrentUser() async {
-    if (!_supported) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    _log('registerCurrentUser() called, supported=$_supported, uid=$uid');
+    if (!_supported) return;
     if (uid == null) return;
 
-    OneSignal.login(uid);
     try {
-      final id = await OneSignal.User.pushSubscription.id;
-      if (id != null && id.isNotEmpty) {
-        await _db.setStaffOneSignalId(uid, id);
+      await OneSignal.login(uid);
+      _log('OneSignal.login($uid) done');
+
+      // Make sure the device is opted in for push.
+      final optedIn = await OneSignal.User.pushSubscription.optedIn;
+      if (optedIn != true) {
+        await OneSignal.User.pushSubscription.optIn();
+        _log('push subscription opted in');
       }
-    } catch (_) {}
+    } catch (e) {
+      _log('login failed: $e');
+    }
+
+    await _saveSubscriptionIdWithRetry(uid);
+  }
+
+  /// Subscription id can be null right after login/install.
+  /// Retry a few times; the observer below also covers late arrival.
+  Future<void> _saveSubscriptionIdWithRetry(String uid) async {
+    for (var i = 0; i < 6; i++) {
+      try {
+        final id = await OneSignal.User.pushSubscription.id;
+        if (id != null && id.isNotEmpty) {
+          await _db.setStaffOneSignalId(uid, id);
+          _log('subscription id saved: $id');
+          return;
+        }
+      } catch (e) {
+        _log('read subscription id failed: $e');
+      }
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    _log('subscription id still null (permission denied or no network?)');
   }
 
   Future<void> clearCurrentUser() async {
@@ -61,7 +99,9 @@ class PushService {
         await _db.clearStaffOneSignalId(uid);
       } catch (_) {}
     }
-    OneSignal.logout();
+    try {
+      await OneSignal.logout();
+    } catch (_) {}
   }
 
   void _attachListeners() {
@@ -87,6 +127,7 @@ class PushService {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       final id = state.current.id;
       if (uid == null || id == null || id.isEmpty) return;
+      _log('subscription changed, saving id: $id');
       _db.setStaffOneSignalId(uid, id);
     });
   }
