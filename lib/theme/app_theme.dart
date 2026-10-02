@@ -22,16 +22,4 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
     );
   }
-
-  static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.dark,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
-    );
-  }
 }

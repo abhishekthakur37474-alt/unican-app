@@ -17,6 +17,7 @@ class VerificationCase {
   final List<String> photoPaths = [];
   /// Hosted (imgbb) URLs for the captured photos. Filled during cloud sync.
   final List<String> photoUrls = [];
+  final List<GeoPhotoGroup> geoGroups = [];
 
   bool? traced; // true = Traced, false = Untraced
 
@@ -92,6 +93,17 @@ class VerificationCase {
     c.longitude = _asDouble(map['longitude']);
     c.photoPaths.addAll(_asStringList(map['photoPaths']));
     c.photoUrls.addAll(_asStringList(map['photoUrls']));
+    final groups = map['geoGroups'];
+    if (groups is List) {
+      for (final item in groups) {
+        if (item is Map) {
+          c.geoGroups.add(
+            GeoPhotoGroup.fromMap(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+    c.syncGeoFields();
     c.traced = map['traced'] is bool ? map['traced'] as bool : null;
     c.reasonOfUntraced = _asString(map['reasonOfUntraced']);
     c.requireToTrace = _asString(map['requireToTrace']);
@@ -148,6 +160,7 @@ class VerificationCase {
       'longitude': longitude,
       'photoPaths': photoPaths,
       'photoUrls': photoUrls,
+      'geoGroups': geoGroups.map((g) => g.toMap()).toList(),
       'traced': traced,
       'reasonOfUntraced': reasonOfUntraced,
       'requireToTrace': requireToTrace,
@@ -186,9 +199,36 @@ class VerificationCase {
     };
   }
 
-  String get geoTagText => (latitude == null || longitude == null)
-      ? 'Not captured'
-      : '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}';
+  String get geoTagText {
+    final tags = geoGroups
+        .where((g) => g.latitude != null && g.longitude != null)
+        .map((g) => g.geoTagText)
+        .toList();
+    if (tags.isNotEmpty) return tags.join(' | ');
+    if (latitude == null || longitude == null) return 'Not captured';
+    return '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}';
+  }
+
+  void syncGeoFields() {
+    if (geoGroups.isEmpty && photoPaths.isNotEmpty) {
+      geoGroups.add(
+        GeoPhotoGroup(
+          latitude: latitude,
+          longitude: longitude,
+          photoPaths: List<String>.from(photoPaths),
+        ),
+      );
+    }
+    photoPaths
+      ..clear()
+      ..addAll(geoGroups.expand((g) => g.photoPaths));
+    final first = geoGroups.cast<GeoPhotoGroup?>().firstWhere(
+          (g) => g?.latitude != null && g?.longitude != null,
+          orElse: () => geoGroups.isEmpty ? null : geoGroups.first,
+        );
+    latitude = first?.latitude;
+    longitude = first?.longitude;
+  }
 
   /// Stable local identifier for a case: prefers the assigned address key so
   /// drafts and the offline sync queue can be matched back to the same case.
@@ -304,4 +344,38 @@ DateTime? _asDate(dynamic value) {
 List<String> _asStringList(dynamic value) {
   if (value is! List) return [];
   return value.map((e) => e.toString()).toList();
+}
+
+class GeoPhotoGroup {
+  double? latitude;
+  double? longitude;
+  final List<String> photoPaths;
+
+  GeoPhotoGroup({
+    this.latitude,
+    this.longitude,
+    List<String>? photoPaths,
+  }) : photoPaths = photoPaths ?? [];
+
+  factory GeoPhotoGroup.fromMap(Map<String, dynamic> map) {
+    return GeoPhotoGroup(
+      latitude: _asDouble(map['latitude']),
+      longitude: _asDouble(map['longitude']),
+      photoPaths: _asStringList(map['photoPaths']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+      'photoPaths': photoPaths,
+    };
+  }
+
+  bool get hasGeoTag => latitude != null && longitude != null;
+
+  String get geoTagText => hasGeoTag
+      ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
+      : 'Not captured';
 }

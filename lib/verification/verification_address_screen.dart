@@ -34,7 +34,6 @@ class _VerificationAddressScreenState
     super.initState();
     final assigned = widget.assignedAddress;
 
-    // Restore an unfinished draft for this case (saved after each step).
     final draft = VerificationStore.instance.getDraft(assigned.id);
     final draftCase = draft?['case'];
     if (draft != null && draftCase is Map) {
@@ -64,7 +63,6 @@ class _VerificationAddressScreenState
     }
   }
 
-  /// Jump straight back to the step the staff member was on.
   void _resume() {
     if (!mounted) return;
     final Widget screen;
@@ -102,8 +100,6 @@ class _VerificationAddressScreenState
     }
 
     _case.traced = _tracedChoice == 'Traced';
-
-    // The next screen is the media (geo tag + photos) step.
     VerificationStore.instance.saveDraft(_case, 2);
 
     Navigator.push(
@@ -116,7 +112,6 @@ class _VerificationAddressScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final assigned = widget.assignedAddress;
 
     return VStepScaffold(
@@ -125,73 +120,178 @@ class _VerificationAddressScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (assigned.applicantName.isNotEmpty || assigned.caseId.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (assigned.applicantName.isNotEmpty)
-                    Text(
-                      assigned.applicantName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  if (assigned.caseId.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      assigned.caseId,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  if (assigned.clientName.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      assigned.clientName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          Text(
-            'Given Address',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          _ApplicantCard(assigned: assigned),
+          const SizedBox(height: 16),
+          _AddressCard(
+            address: _case.address,
+            phone: assigned.phone,
           ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(_case.address, style: theme.textTheme.bodyLarge),
-          ),
-          if (assigned.phone.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              assigned.phone,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           VOptionGroup(
             label: 'Was the address traced?',
             options: const ['Traced', 'Untraced'],
             value: _tracedChoice,
             onChanged: (v) => setState(() => _tracedChoice = v),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApplicantCard extends StatelessWidget {
+  final AssignedAddress assigned;
+
+  const _ApplicantCard({required this.assigned});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (assigned.applicantName.isEmpty &&
+        assigned.caseId.isEmpty &&
+        assigned.clientName.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.person_outline_rounded,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (assigned.applicantName.isNotEmpty)
+                  Text(
+                    assigned.applicantName,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                if (assigned.caseId.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    assigned.caseId,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+                if (assigned.clientName.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    assigned.clientName,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer
+                          .withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddressCard extends StatelessWidget {
+  final String address;
+  final String phone;
+
+  const _AddressCard({
+    required this.address,
+    required this.phone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Given Address',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            address,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              height: 1.4,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          if (phone.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.phone_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  phone,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

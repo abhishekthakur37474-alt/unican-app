@@ -3,7 +3,7 @@ import '../models/verification_case.dart';
 import '../services/verification_store.dart';
 import 'verification_widgets.dart';
 import 'verification_confirmed_screen.dart';
-import 'verification_not_confirmed_screen.dart';
+import 'verification_residing_screen.dart';
 
 class VerificationNeighborScreen extends StatefulWidget {
   final VerificationCase verificationCase;
@@ -45,14 +45,14 @@ class _VerificationNeighborScreenState
     c.neighbor2 = _n2Ctrl.text;
     c.neighborConfirmed = _confirmedChoice == 'Confirmed';
 
-    VerificationStore.instance.saveDraft(c, c.neighborConfirmed! ? 4 : 6);
+    VerificationStore.instance.saveDraft(c, c.neighborConfirmed! ? 4 : 5);
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => c.neighborConfirmed!
             ? VerificationConfirmedScreen(verificationCase: c)
-            : VerificationNotConfirmedScreen(verificationCase: c),
+            : VerificationResidingScreen(verificationCase: c),
       ),
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/verification_store.dart';
 import 'verification_widgets.dart';
-import 'verification_residing_screen.dart';
+import 'verification_final_screen.dart';
 
 class VerificationConfirmedScreen extends StatefulWidget {
   final VerificationCase verificationCase;
@@ -75,12 +75,20 @@ class _VerificationConfirmedScreenState
     c.totalFamilyMembers = _familyMembers ?? '';
     c.numberOfEarners = _earners ?? '';
     c.verifierComments = _commentsCtrl.text;
+    c.applicantResidingThere ??=
+        !(_residenceConfirmation ?? '').toLowerCase().contains('not residing');
+    c.generatedRemarks = c.buildConfirmedRemarks();
+    c.finalStatus = c.applicantResidingThere!
+        ? 'Traced — Confirmed — Residing'
+        : 'Traced — Confirmed — Not Residing';
 
-    VerificationStore.instance.saveDraft(c, 5);
+    VerificationStore.instance.saveDraft(c, 4);
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => VerificationResidingScreen(verificationCase: c)),
+      MaterialPageRoute(
+        builder: (_) => VerificationFinalScreen(verificationCase: c),
+      ),
     );
   }
 
@@ -104,26 +112,38 @@ class _VerificationConfirmedScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           VLabeledField(label: 'Met Person Name', controller: _metPersonCtrl),
-          VOptionGroup(
+          VDropdown(
             label: 'Relation with the Applicant',
             options: const [
-              'Self', 'Spouse', 'Brother', 'Sister', 'Father', 'Mother', 'Son', 'Any other',
+              'Self',
+              'Spouse',
+              'Brother',
+              'Sister',
+              'Father',
+              'Mother',
+              'Son',
+              'Any other',
             ],
             value: _relation,
             onChanged: (v) => setState(() => _relation = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Applicant Residence Confirmation',
             options: const ['Residing here', 'Not residing here', 'Any other'],
             value: _residenceConfirmation,
             onChanged: (v) => setState(() => _residenceConfirmation = v),
           ),
           VLabeledField(label: 'Tenure of Residence', controller: _tenureCtrl),
-          VOptionGroup(
+          VDropdown(
             label: 'Ownership of Residence',
             options: const [
-              'Owned', 'Rented', 'Parental owned', 'Company provided',
-              'Relative owned', 'Govt. provided', 'Any other',
+              'Owned',
+              'Rented',
+              'Parental owned',
+              'Company provided',
+              'Relative owned',
+              'Govt. provided',
+              'Any other',
             ],
             value: _ownership,
             onChanged: (v) => setState(() => _ownership = v),
@@ -132,52 +152,66 @@ class _VerificationConfirmedScreenState
             VLabeledField(label: 'Rent Amount', controller: _rentCtrl),
             VLabeledField(label: 'Landlord Name', controller: _landlordCtrl),
           ],
-          VOptionGroup(
+          VDropdown(
             label: 'Building Description',
             options: const [
-              'Flat', 'Independent house', 'Kothi', 'Apartment', 'T-Huts', 'Any other',
+              'Flat',
+              'Independent house',
+              'Kothi',
+              'Apartment',
+              'T-Huts',
+              'Any other',
             ],
             value: _building,
             onChanged: (v) => setState(() => _building = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Total Floors',
             options: const [
-              'Only ground floor', 'Ground to 1st', 'Ground to 2nd',
-              'Ground to 3rd', 'Ground to 4th', 'Any other',
+              'Only ground floor',
+              'Ground to 1st',
+              'Ground to 2nd',
+              'Ground to 3rd',
+              'Ground to 4th',
+              'Any other',
             ],
             value: _totalFloors,
             onChanged: (v) => setState(() => _totalFloors = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Applicant Residing on Which Floor',
             options: const ['Ground', '1st', '2nd', '3rd', '4th', 'Any other'],
             value: _applicantFloor,
             onChanged: (v) => setState(() => _applicantFloor = v),
           ),
           VLabeledField(label: 'Land Area', controller: _landAreaCtrl),
-          VOptionGroup(
+          VDropdown(
             label: 'Locality of Address',
             options: const [
-              'Middle class', 'Lower middle class', 'Upper middle class',
-              'Posh area', 'Village area', 'Slum locality', 'Any other',
+              'Middle class',
+              'Lower middle class',
+              'Upper middle class',
+              'Posh area',
+              'Village area',
+              'Slum locality',
+              'Any other',
             ],
             value: _locality,
             onChanged: (v) => setState(() => _locality = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Document Shown by Met Person',
             options: const ['PAN card', 'Aadhar card', 'E-bill', 'Any other'],
             value: _document,
             onChanged: (v) => setState(() => _document = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Total Family Members',
             options: const ['1', '2', '3', '4', 'Joint family', 'Any other'],
             value: _familyMembers,
             onChanged: (v) => setState(() => _familyMembers = v),
           ),
-          VOptionGroup(
+          VDropdown(
             label: 'Number of Earners',
             options: const ['1', '2', '3', '4', 'Any other'],
             value: _earners,

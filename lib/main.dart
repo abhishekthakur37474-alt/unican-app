@@ -50,24 +50,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: AppSettings.instance.themeMode,
-      builder: (context, mode, child) {
-        return MaterialApp(
-          title: 'Unican',
-          navigatorKey: NotificationRouter.navigatorKey,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: mode,
-          initialRoute: '/',
-          routes: {
-            '/': (context) => const SplashScreen(),
-            '/login': (context) => const LoginScreen(),
-            '/home': (context) => const MainScreen(),
-            '/settings': (context) => const SettingsScreen(),
-          },
-        );
+    return MaterialApp(
+      title: 'Unican',
+      navigatorKey: NotificationRouter.navigatorKey,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      themeMode: ThemeMode.light,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => const MainScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }

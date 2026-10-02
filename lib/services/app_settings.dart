@@ -5,8 +5,6 @@ class AppSettings {
 
   static final AppSettings instance = AppSettings._();
 
-  final ValueNotifier<ThemeMode> themeMode =
-      ValueNotifier<ThemeMode>(ThemeMode.light);
   final ValueNotifier<String> displayName = ValueNotifier<String>('');
   final ValueNotifier<bool> verificationAlerts = ValueNotifier<bool>(true);
   final ValueNotifier<bool> reminderAlerts = ValueNotifier<bool>(true);

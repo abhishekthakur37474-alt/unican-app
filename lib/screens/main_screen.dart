@@ -49,7 +49,7 @@ class _MainScreenState extends State<MainScreen> {
         return ValueListenableBuilder<int>(
           valueListenable: AppSettings.instance.homeTabIndex,
           builder: (context, index, child) {
-            final selectedColor = theme.colorScheme.primary;
+            const selectedColor = Color(0xFF6366F1);
             final unselectedColor = theme.colorScheme.onSurfaceVariant;
 
             Widget navIcon(IconData icon, {required bool selected}) => HugeIcon(
@@ -74,8 +74,7 @@ class _MainScreenState extends State<MainScreen> {
                   AppSettings.instance.homeTabIndex.value = i;
                 },
                 backgroundColor: theme.colorScheme.surface,
-                indicatorColor:
-                    theme.colorScheme.primary.withValues(alpha: 0.15),
+                indicatorColor: Colors.transparent,
                 elevation: 3,
                 destinations: [
                   NavigationDestination(

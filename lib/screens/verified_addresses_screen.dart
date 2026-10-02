@@ -101,8 +101,7 @@ class VerifiedAddressesScreen extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
+      );
 
     if (embedded) return content;
     return Scaffold(

@@ -4,7 +4,6 @@ import '../services/app_settings.dart';
 import '../services/auth_service.dart';
 import '../services/verification_store.dart';
 import 'about_screen.dart';
-import 'appearance_screen.dart';
 import 'change_password_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_policy_screen.dart';
@@ -132,17 +131,6 @@ class SettingsScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => const NotificationSettingsScreen(),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _SettingsTile(
-            icon: Icons.dark_mode_outlined,
-            label: 'Appearance',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AppearanceScreen()),
               );
             },
           ),

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/verification_store.dart';
 import 'verification_widgets.dart';
-import 'verification_final_screen.dart';
+import 'verification_confirmed_screen.dart';
+import 'verification_not_confirmed_screen.dart';
 
 class VerificationResidingScreen extends StatefulWidget {
   final VerificationCase verificationCase;
@@ -35,27 +36,34 @@ class _VerificationResidingScreenState
 
     final c = widget.verificationCase;
     c.applicantResidingThere = _choice == 'Yes';
-    c.generatedRemarks = c.buildConfirmedRemarks();
-    c.finalStatus = c.applicantResidingThere!
-        ? 'Traced — Confirmed — Residing'
-        : 'Traced — Confirmed — Not Residing';
 
-    VerificationStore.instance.saveDraft(c, 5);
+    if (c.applicantResidingThere!) {
+      VerificationStore.instance.saveDraft(c, 4);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VerificationConfirmedScreen(verificationCase: c),
+        ),
+      );
+      return;
+    }
 
+    VerificationStore.instance.saveDraft(c, 6);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => VerificationFinalScreen(verificationCase: c)),
+      MaterialPageRoute(
+        builder: (_) => VerificationNotConfirmedScreen(verificationCase: c),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return VStepScaffold(
-      title: 'Final Check',
-      nextLabel: 'Finish',
+      title: 'Applicant Residing',
       onNext: _next,
       child: VOptionGroup(
-        label: 'Is the applicant residing there?',
+        label: 'Applicant Residing There?',
         options: const ['Yes', 'No'],
         value: _choice,
         onChanged: (v) => setState(() => _choice = v),
