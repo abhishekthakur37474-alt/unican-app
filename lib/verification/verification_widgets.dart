@@ -100,7 +100,10 @@ class VStepScaffold extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: onNext,
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    onNext();
+                  },
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),

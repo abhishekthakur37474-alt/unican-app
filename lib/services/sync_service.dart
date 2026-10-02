@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -30,8 +31,10 @@ class SyncService {
   final ValueNotifier<bool> online = ValueNotifier<bool>(true);
 
   StreamSubscription<List<ConnectivityResult>>? _sub;
+  Timer? _retryTimer;
   bool _initialized = false;
   bool _syncing = false;
+  bool _syncQueued = false;
 
   bool _hasConnection(List<ConnectivityResult> results) =>
       results.any((r) => r != ConnectivityResult.none);
@@ -82,9 +85,13 @@ class SyncService {
   }
 
   /// Flush every queued verification to Firebase. Safe to call repeatedly;
-  /// concurrent calls are ignored.
+  /// concurrent calls are coalesced, and anything enqueued while a sync is
+  /// already running is picked up by the same pass.
   Future<void> syncNow() async {
-    if (_syncing) return;
+    if (_syncing) {
+      _syncQueued = true;
+      return;
+    }
     if (!_local.isReady) await _local.init();
 
     // Everything stays queued in Hive until the device is actually online.
@@ -95,13 +102,27 @@ class SyncService {
 
     _syncing = true;
     try {
-      for (final record in _local.allPending()) {
-        await _syncRecord(record);
-      }
+      do {
+        _syncQueued = false;
+        for (final record in _local.allPending()) {
+          await _syncRecord(record);
+        }
+      } while (_syncQueued);
     } finally {
       _syncing = false;
       pendingCount.value = _local.pendingCount;
+      _scheduleRetry();
     }
+  }
+
+  /// A record can fail while the device is technically online (flaky network,
+  /// imgbb hiccup). Retry on a timer until the queue is empty instead of
+  /// waiting for the next connectivity event.
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    if (pendingCount.value == 0 || !online.value) return;
+    _retryTimer = Timer(const Duration(seconds: 30), syncNow);
   }
 
   Future<void> _syncRecord(Map<String, dynamic> record) async {
@@ -131,7 +152,15 @@ class SyncService {
         var failed = false;
 
         for (var i = already; i < value.photoPaths.length; i++) {
-          final url = await _imgbb.upload(value.photoPaths[i]);
+          final path = value.photoPaths[i];
+          // A cached capture may have been cleared by the OS while offline.
+          // Skip the missing file and keep the metadata moving instead of
+          // blocking the whole record forever.
+          if (!await File(path).exists()) {
+            uploaded = i + 1;
+            continue;
+          }
+          final url = await _imgbb.upload(path);
           if (url == null) {
             failed = true;
             break;
@@ -178,5 +207,7 @@ class SyncService {
   void dispose() {
     _sub?.cancel();
     _sub = null;
+    _retryTimer?.cancel();
+    _retryTimer = null;
   }
 }

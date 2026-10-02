@@ -201,6 +201,59 @@ class VerificationCase {
   String get _mediaSuffix =>
       '\n\nGeo-tag: $geoTagText. Photos attached: ${photoPaths.length}.';
 
+  /// Human-readable Title -> Answer pairs used to render the generated
+  /// remarks as labelled rows instead of one long paragraph.
+  List<(String, String)> get remarksEntries {
+    final items = <(String, String)>[];
+    void add(String label, String value) {
+      if (value.trim().isNotEmpty) items.add((label, value));
+    }
+
+    add('Address', address);
+    if (traced == false) {
+      add('Reason of Untraced', reasonOfUntraced);
+      add('Require to Trace', requireToTrace);
+      add('Calling Response', callingResponse);
+      add('Last Location', lastLocation);
+      add('Comments', untracedComments);
+    } else {
+      add('Met Person Name', metPersonName);
+      if (neighborConfirmed == false) {
+        add('Who is That', whoIsThat);
+        add('Residence Confirmation', residenceConfirmationB2);
+        add('Total Floors', totalFloorsB2);
+        add('Address Floor', addressFloorB2);
+        add('Land Area', landAreaB2);
+        add('Locality', localityB2);
+        add('Comments', commentsB2);
+      } else {
+        add('Relation with Applicant', relationWithApplicant);
+        add('Residence Confirmation', residenceConfirmation);
+        add('Tenure of Residence', tenureOfResidence);
+        add('Ownership of Residence', ownershipOfResidence);
+        add('Rent Amount', rentAmount);
+        add('Landlord Name', landlordName);
+        add('Building Description', buildingDescription);
+        add('Total Floors', totalFloors);
+        add('Applicant Floor', applicantFloor);
+        add('Land Area', landArea);
+        add('Locality of Address', localityOfAddress);
+        add('Document Shown', documentShown);
+        add('Total Family Members', totalFamilyMembers);
+        add('Number of Earners', numberOfEarners);
+        if (applicantResidingThere != null) {
+          add('Applicant Residing There',
+              applicantResidingThere! ? 'Yes' : 'No');
+        }
+        add('Verifier Comments', verifierComments);
+      }
+      add('1st Neighbor', neighbor1);
+      add('2nd Neighbor', neighbor2);
+    }
+    add('Geo Tag', geoTagText);
+    return items;
+  }
+
   String buildConfirmedRemarks() {
     return 'Visited at given address ($address) we met with met person name '
         '($relationWithApplicant), who confirmed that applicant is '

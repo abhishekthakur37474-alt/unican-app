@@ -86,12 +86,12 @@ class VerificationStore {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    // The flow is complete: drop the in-progress draft for this case.
+    // Queue the finished record first so a crash can never lose it, then
+    // drop the in-progress draft for this case.
+    await SyncService.instance.enqueue(value, uid: uid);
     try {
       await _local.deleteDraft(value.localKey);
     } catch (_) {}
-
-    await SyncService.instance.enqueue(value, uid: uid);
     _emit();
   }
 

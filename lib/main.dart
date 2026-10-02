@@ -26,11 +26,7 @@ void main() async {
 
   // Keep a local RTDB cache so assigned addresses and notifications stay
   // readable while offline. Must run before the first database reference.
-  unawaited(
-    FirebaseDatabase.instance
-        .setPersistenceEnabled(true)
-        .catchError((Object _) {}),
-  );
+  FirebaseDatabase.instance.setPersistenceEnabled(true);
 
   // Local storage + connectivity listener: no network needed, must finish
   // before the first frame so offline drafts are available.

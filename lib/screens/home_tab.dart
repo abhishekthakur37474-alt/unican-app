@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import 'assigned_addresses_screen.dart';
 import 'profile_screen.dart';
 import 'verification_list_screen.dart';
+import 'verified_addresses_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -47,7 +48,11 @@ class HomeTab extends StatelessWidget {
               valueListenable: VerificationStore.instance.cases,
               builder: (context, cases, child) {
                 final favorites = cases.where((e) => e.isFavorite).length;
-                return Container(
+                return InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: () =>
+                      _open(context, const VerifiedAddressesScreen()),
+                  child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -92,12 +97,24 @@ class HomeTab extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Icon(
-                        Icons.cloud_done_rounded,
-                        color: theme.colorScheme.onPrimary,
-                        size: 40,
+                      Column(
+                        children: [
+                          Icon(
+                            Icons.cloud_done_rounded,
+                            color: theme.colorScheme.onPrimary,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'View report',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
+                  ),
                   ),
                 );
               },
@@ -172,6 +189,14 @@ class HomeTab extends StatelessWidget {
                   onTap: () => _open(
                     context,
                     const VerificationListScreen(title: 'Activity'),
+                  ),
+                ),
+                _QuickActionCard(
+                  icon: Icons.insights_rounded,
+                  label: 'Reports',
+                  onTap: () => _open(
+                    context,
+                    const VerifiedAddressesScreen(),
                   ),
                 ),
                 _QuickActionCard(

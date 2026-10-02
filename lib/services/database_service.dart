@@ -3,11 +3,26 @@ import '../models/assigned_address.dart';
 import '../models/staff_notification.dart';
 import '../models/verification_case.dart';
 
-/// RTDB node structure:
+/// RTDB node structure (Firebase project: unican-33d3b)
+///
 /// root
 ///  ├── staff/{uid}
-///  ├── staff_notifications/{uid}/{id}
-///  └── verification_addresses/{id}
+///  │     ├── name, role, deviceId
+///  │     ├── oneSignalId, oneSignalIdUpdatedAt
+///  │     └── fcmToken, fcmTokenUpdatedAt            // admin push targets
+///  ├── staff_notifications/{uid}/{notificationId}  // admin -> app alerts
+///  │     └── id, caseId, addressId, applicantName, phone, address,
+///  │         clientName, verificationType, priority, timestamp,
+///  │         read, type, message
+///  ├── verification_addresses/{addressId}           // admin assigns work
+///  │     ├── addressLine, applicantName, caseId, clientName, city,
+///  │     ├── landmark, phone, pincode, priority, state, status,
+///  │     └── assignedToStaffId, assignedToStaffName, assignedAt, createdAt
+///  └── staff_verifications/{uid}/{caseId}           // app writes results
+///        └── full VerificationCase map (VerificationCase.toMap)
+///
+/// Completed verifications are written locally first (Hive) and only then
+/// mirrored here by SyncService; see that class for the offline queue.
 class DatabaseService {
   final DatabaseReference _root = FirebaseDatabase.instance.ref();
 
@@ -35,6 +50,17 @@ class DatabaseService {
 
   Future<void> clearStaffOneSignalId(String uid) async {
     await _root.child('staff').child(uid).update({'oneSignalId': null});
+  }
+
+  Future<void> setStaffFcmToken(String uid, String token) async {
+    await _root.child('staff').child(uid).update({
+      'fcmToken': token,
+      'fcmTokenUpdatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> clearStaffFcmToken(String uid) async {
+    await _root.child('staff').child(uid).update({'fcmToken': null});
   }
 
   Future<List<AssignedAddress>> getAssignedAddresses(String staffId) async {

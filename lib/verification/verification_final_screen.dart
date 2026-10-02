@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/verification_store.dart';
+import 'verification_done_screen.dart';
 
 class VerificationFinalScreen extends StatelessWidget {
   final VerificationCase verificationCase;
@@ -16,7 +17,7 @@ class VerificationFinalScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Verification Complete')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,21 +106,44 @@ class VerificationFinalScreen extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 10),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      c.generatedRemarks,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child: c.remarksEntries.isEmpty
+                    ? const Text('No remarks available')
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0;
+                              i < c.remarksEntries.length;
+                              i++) ...[
+                            if (i > 0)
+                              Divider(
+                                height: 18,
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            Text.rich(
+                              TextSpan(
+                                style: theme.textTheme.bodyMedium,
+                                children: [
+                                  TextSpan(
+                                    text: c.remarksEntries[i].$1,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const TextSpan(text: ' - '),
+                                  TextSpan(text: c.remarksEntries[i].$2),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -133,10 +157,13 @@ class VerificationFinalScreen extends StatelessWidget {
                     if (alreadySaved) {
                       Navigator.pop(context);
                     } else {
-                      Navigator.pushNamedAndRemoveUntil(
+                      Navigator.pushReplacement(
                         context,
-                        '/home',
-                        (route) => false,
+                        MaterialPageRoute(
+                          builder: (_) => VerificationDoneScreen(
+                            verificationCase: c,
+                          ),
+                        ),
                       );
                     }
                   },
