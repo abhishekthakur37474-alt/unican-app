@@ -2,34 +2,33 @@ import 'package:flutter/material.dart';
 import '../models/verification_case.dart';
 import '../services/verification_store.dart';
 import '../verification/verification_final_screen.dart';
+import '../widgets/app_top_bar.dart';
 import '../widgets/verification_list_tile.dart';
 
 class VerificationListScreen extends StatelessWidget {
   final String title;
   final bool favoritesOnly;
+  final bool embedded;
 
   const VerificationListScreen({
     super.key,
     required this.title,
     this.favoritesOnly = false,
+    this.embedded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final content = SafeArea(
+      child: ValueListenableBuilder<List<VerificationCase>>(
+        valueListenable: VerificationStore.instance.cases,
+        builder: (context, all, child) {
+          final theme = Theme.of(context);
+          final items =
+              favoritesOnly ? all.where((e) => e.isFavorite).toList() : all;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: SafeArea(
-        child: ValueListenableBuilder<List<VerificationCase>>(
-          valueListenable: VerificationStore.instance.cases,
-          builder: (context, all, child) {
-            final items = favoritesOnly
-                ? all.where((e) => e.isFavorite).toList()
-                : all;
-
-            if (items.isEmpty) {
-              return Center(
+          if (items.isEmpty) {
+            return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -86,6 +85,12 @@ class VerificationListScreen extends StatelessWidget {
           },
         ),
       ),
+    );
+
+    if (embedded) return content;
+    return Scaffold(
+      appBar: AppTopBar(title: title, showBack: true),
+      body: content,
     );
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+
 import '../services/app_settings.dart';
 import '../services/notification_router.dart';
-import '../services/notification_store.dart';
+import '../widgets/app_top_bar.dart';
 import 'home_tab.dart';
-import 'notifications_screen.dart';
 import 'settings_screen.dart';
+import 'verification_list_screen.dart';
+import 'verified_addresses_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,11 +17,12 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  static const _titles = ['Home', 'Notifications', 'Settings'];
+  static const _titles = ['Welcome Back', 'Activity', 'Reports', 'Settings'];
 
   static const _screens = [
     HomeTab(),
-    NotificationsScreen(),
+    VerificationListScreen(title: 'Activity', embedded: true),
+    VerifiedAddressesScreen(embedded: true),
     SettingsScreen(),
   ];
 
@@ -27,7 +31,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
-      if (args is int) {
+      if (args is int && args >= 0 && args < _screens.length) {
         AppSettings.instance.homeTabIndex.value = args;
       }
       // Open a case tapped from an FCM notification once we're signed in.
@@ -39,24 +43,32 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return ValueListenableBuilder<int>(
-      valueListenable: AppSettings.instance.homeTabIndex,
-      builder: (context, index, child) {
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(_titles[index]),
-            centerTitle: false,
-            backgroundColor: theme.colorScheme.surface,
-            scrolledUnderElevation: 0,
-          ),
-          body: IndexedStack(
-            index: index,
-            children: _screens,
-          ),
-          bottomNavigationBar: ValueListenableBuilder<int>(
-            valueListenable: NotificationStore.instance.unreadCount,
-            builder: (context, unread, child) {
-              return NavigationBar(
+    return ValueListenableBuilder<String>(
+      valueListenable: AppSettings.instance.displayName,
+      builder: (context, name, child) {
+        return ValueListenableBuilder<int>(
+          valueListenable: AppSettings.instance.homeTabIndex,
+          builder: (context, index, child) {
+            final selectedColor = theme.colorScheme.primary;
+            final unselectedColor = theme.colorScheme.onSurfaceVariant;
+
+            Widget navIcon(IconData icon, {required bool selected}) => HugeIcon(
+                  icon: icon,
+                  color: selected ? selectedColor : unselectedColor,
+                  size: 26,
+                );
+
+            return Scaffold(
+              appBar: AppTopBar(
+                title: _titles[index],
+                subtitle: index == 0 && name.trim().isNotEmpty ? name : null,
+                actions: const [NotificationBell()],
+              ),
+              body: IndexedStack(
+                index: index,
+                children: _screens,
+              ),
+              bottomNavigationBar: NavigationBar(
                 selectedIndex: index,
                 onDestinationSelected: (i) {
                   AppSettings.instance.homeTabIndex.value = i;
@@ -66,49 +78,40 @@ class _MainScreenState extends State<MainScreen> {
                     theme.colorScheme.primary.withValues(alpha: 0.15),
                 elevation: 3,
                 destinations: [
-                  const NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
+                  NavigationDestination(
+                    icon: navIcon(HugeIcons.strokeRoundedHome03,
+                        selected: false),
+                    selectedIcon:
+                        navIcon(HugeIcons.strokeRoundedHome03, selected: true),
                     label: 'Home',
                   ),
                   NavigationDestination(
-                    icon: _AlertsIcon(
-                      unread: unread,
-                      icon: Icons.notifications_none_rounded,
-                    ),
-                    selectedIcon: _AlertsIcon(
-                      unread: unread,
-                      icon: Icons.notifications_rounded,
-                    ),
-                    label: 'Alerts',
+                    icon: navIcon(HugeIcons.strokeRoundedActivity01,
+                        selected: false),
+                    selectedIcon: navIcon(HugeIcons.strokeRoundedActivity01,
+                        selected: true),
+                    label: 'Activity',
                   ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(Icons.settings_rounded),
+                  NavigationDestination(
+                    icon: navIcon(HugeIcons.strokeRoundedAnalytics01,
+                        selected: false),
+                    selectedIcon: navIcon(HugeIcons.strokeRoundedAnalytics01,
+                        selected: true),
+                    label: 'Reports',
+                  ),
+                  NavigationDestination(
+                    icon: navIcon(HugeIcons.strokeRoundedSettings02,
+                        selected: false),
+                    selectedIcon: navIcon(HugeIcons.strokeRoundedSettings02,
+                        selected: true),
                     label: 'Settings',
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          },
         );
       },
-    );
-  }
-}
-
-class _AlertsIcon extends StatelessWidget {
-  final int unread;
-  final IconData icon;
-
-  const _AlertsIcon({required this.unread, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    if (unread <= 0) return Icon(icon);
-    return Badge.count(
-      count: unread,
-      child: Icon(icon),
     );
   }
 }

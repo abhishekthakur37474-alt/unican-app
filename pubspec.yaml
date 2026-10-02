@@ -47,6 +47,7 @@ dependencies:
   path_provider: ^2.1.4
   connectivity_plus: ^6.0.5
   http: ^1.2.2
+  hugeicons: ^0.0.11
 
 dev_dependencies:
   flutter_test:

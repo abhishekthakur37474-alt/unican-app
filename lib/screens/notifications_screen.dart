@@ -5,6 +5,7 @@ import '../models/staff_notification.dart';
 import '../services/app_settings.dart';
 import '../services/database_service.dart';
 import '../verification/verification_address_screen.dart';
+import '../widgets/app_top_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -71,8 +72,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final theme = Theme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return SafeArea(
-      child: ValueListenableBuilder<bool>(
+    return Scaffold(
+      appBar: const AppTopBar(title: 'Notifications', showBack: true),
+      body: SafeArea(
+        child: ValueListenableBuilder<bool>(
         valueListenable: AppSettings.instance.verificationAlerts,
         builder: (context, alertsEnabled, child) {
           if (!alertsEnabled) {
@@ -235,6 +238,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             },
           );
         },
+        ),
       ),
     );
   }

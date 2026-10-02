@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/assigned_address.dart';
+import '../screens/notifications_screen.dart';
 import '../verification/verification_address_screen.dart';
-import 'app_settings.dart';
 import 'database_service.dart';
 
 /// Resolves an FCM notification tap (foreground, background or terminated)
@@ -23,8 +23,23 @@ class NotificationRouter {
   final DatabaseService _db = DatabaseService();
 
   Map<String, dynamic>? _pending;
+  bool _pendingAlerts = false;
 
   bool get hasPending => _pending != null;
+
+  /// Opens the notifications list. Used for alert taps that are not tied to a
+  /// specific case. Queued until the navigator is ready if needed.
+  void openNotifications() {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      _pendingAlerts = true;
+      return;
+    }
+    _pendingAlerts = false;
+    navigator.push(
+      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+    );
+  }
 
   /// Entry point for FCM message data payloads.
   void handleData(Map<String, dynamic> data) {
@@ -39,6 +54,7 @@ class NotificationRouter {
 
   /// Retry a tap stashed before the navigator/user was available.
   void flushPending() {
+    if (_pendingAlerts) openNotifications();
     if (_pending == null) return;
     _tryOpen();
   }
@@ -59,7 +75,7 @@ class NotificationRouter {
 
     if (caseId.isEmpty && addressId.isEmpty) {
       _pending = null;
-      AppSettings.instance.homeTabIndex.value = 1;
+      openNotifications();
       return;
     }
 

@@ -1,22 +1,23 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../models/assigned_address.dart';
 import '../services/database_service.dart';
 import '../services/sync_service.dart';
-import '../theme/app_theme.dart';
-import '../verification/verification_address_screen.dart';
+import '../widgets/app_top_bar.dart';
+import '../widgets/assigned_address_card.dart';
+import 'assigned_address_detail_screen.dart';
 
 class AssignedAddressesScreen extends StatelessWidget {
   const AssignedAddressesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final db = DatabaseService();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Assigned Addresses')),
+      appBar: const AppTopBar(title: 'Assigned Addresses', showBack: true),
       body: SafeArea(
         child: uid == null
             ? const _EmptyState(
@@ -62,124 +63,23 @@ class AssignedAddressesScreen extends StatelessWidget {
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      return Material(
-                        color: theme.colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => VerificationAddressScreen(
-                                  assignedAddress: item,
-                                ),
+                      return AssignedAddressCard(
+                        item: item,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AssignedAddressDetailScreen(
+                                assignedAddress: item,
                               ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary
-                                        .withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(13),
-                                  ),
-                                  child: Icon(
-                                    Icons.home_work_outlined,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.applicantName.isEmpty
-                                            ? item.caseId
-                                            : item.applicantName,
-                                        style: theme.textTheme.bodyLarge
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item.fullAddress,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 6,
-                                        children: [
-                                          if (item.caseId.isNotEmpty)
-                                            _Chip(label: item.caseId),
-                                          if (item.verificationType.isNotEmpty)
-                                            _Chip(label: item.verificationType),
-                                          if (item.priority.isNotEmpty)
-                                            _Chip(
-                                              label: item.priority,
-                                              highlight: item.priority
-                                                      .toLowerCase() !=
-                                                  'normal',
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: theme.colorScheme.outline,
-                                ),
-                              ],
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   );
                 },
               ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final bool highlight;
-
-  const _Chip({required this.label, this.highlight = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: highlight
-            ? theme.colorScheme.error.withValues(alpha: 0.12)
-            : theme.colorScheme.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: highlight ? theme.colorScheme.error : AppColors.primary,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }

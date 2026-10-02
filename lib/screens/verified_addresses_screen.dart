@@ -4,19 +4,20 @@ import '../models/verification_case.dart';
 import '../services/sync_service.dart';
 import '../services/verification_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_top_bar.dart';
 import 'verification_detail_screen.dart';
 
 /// Report screen: how many addresses this staff member has verified, a
 /// breakdown by result, and the full list of completed verifications.
 class VerifiedAddressesScreen extends StatelessWidget {
-  const VerifiedAddressesScreen({super.key});
+  final bool embedded;
+
+  const VerifiedAddressesScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Verified Addresses')),
-      body: SafeArea(
-        child: ValueListenableBuilder<List<VerificationCase>>(
+    final content = SafeArea(
+      child: ValueListenableBuilder<List<VerificationCase>>(
           valueListenable: VerificationStore.instance.cases,
           builder: (context, all, child) {
             if (all.isEmpty) {
@@ -101,6 +102,12 @@ class VerifiedAddressesScreen extends StatelessWidget {
           },
         ),
       ),
+    );
+
+    if (embedded) return content;
+    return Scaffold(
+      appBar: const AppTopBar(title: 'Verified Addresses', showBack: true),
+      body: content,
     );
   }
 }

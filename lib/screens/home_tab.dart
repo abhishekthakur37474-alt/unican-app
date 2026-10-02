@@ -1,13 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../models/assigned_address.dart';
 import '../models/verification_case.dart';
-import '../services/app_settings.dart';
+import '../services/database_service.dart';
 import '../services/sync_service.dart';
 import '../services/verification_store.dart';
-import '../theme/app_theme.dart';
+import '../widgets/assigned_address_card.dart';
+import 'assigned_address_detail_screen.dart';
 import 'assigned_addresses_screen.dart';
-import 'profile_screen.dart';
-import 'verification_list_screen.dart';
-import 'verified_addresses_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -19,250 +20,254 @@ class HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final db = DatabaseService();
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back,',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            ValueListenableBuilder<String>(
-              valueListenable: AppSettings.instance.displayName,
-              builder: (context, name, child) {
-                return Text(
-                  name.isEmpty ? 'there' : name,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            ValueListenableBuilder<List<VerificationCase>>(
-              valueListenable: VerificationStore.instance.cases,
-              builder: (context, cases, child) {
-                final favorites = cases.where((e) => e.isFavorite).length;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: () =>
-                      _open(context, const VerifiedAddressesScreen()),
-                  child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradient,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 22,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: uid == null
+            ? _EmptyState(
+                icon: Icons.person_off_outlined,
+                title: 'Sign in required',
+                subtitle: 'Log in to see your assigned verifications',
+              )
+            : StreamBuilder<List<AssignedAddress>>(
+                stream: db.watchAssignedAddresses(uid),
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? const <AssignedAddress>[];
+                  final waiting =
+                      snapshot.connectionState == ConnectionState.waiting &&
+                          !snapshot.hasData;
+                  final offline = !SyncService.instance.online.value;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      ValueListenableBuilder<List<VerificationCase>>(
+                        valueListenable: VerificationStore.instance.cases,
+                        builder: (context, cases, child) => _StatsRow(
+                          assigned: items.length,
+                          completed: cases.length,
+                        ),
+                      ),
+                      ValueListenableBuilder<int>(
+                        valueListenable: SyncService.instance.pendingCount,
+                        builder: (context, pending, child) {
+                          if (pending == 0) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 14),
+                            child: _PendingBanner(pending: pending),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 22),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Your dashboard',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onPrimary
-                                  .withValues(alpha: 0.85),
+                            'Assigned Addresses',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${cases.length} verifications',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
+                          TextButton(
+                            onPressed: () => _open(
+                              context,
+                              const AssignedAddressesScreen(),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$favorites starred',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onPrimary
-                                  .withValues(alpha: 0.85),
-                            ),
+                            child: const Text('View all'),
                           ),
                         ],
                       ),
-                      Column(
-                        children: [
-                          Icon(
-                            Icons.cloud_done_rounded,
-                            color: theme.colorScheme.onPrimary,
-                            size: 40,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'View report',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onPrimary,
+                      const SizedBox(height: 6),
+                      if (waiting)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (snapshot.hasError || (offline && items.isEmpty))
+                        const _EmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Could not load addresses',
+                          subtitle: 'Check your connection and try again',
+                        )
+                      else if (items.isEmpty)
+                        const _EmptyState(
+                          icon: Icons.location_off_outlined,
+                          title: 'No addresses assigned',
+                          subtitle: 'New cases from admin will appear here',
+                        )
+                      else
+                        for (final item in items) ...[
+                          AssignedAddressCard(
+                            item: item,
+                            onTap: () => _open(
+                              context,
+                              AssignedAddressDetailScreen(
+                                assignedAddress: item,
+                              ),
                             ),
                           ),
+                          const SizedBox(height: 10),
                         ],
-                      ),
                     ],
-                  ),
-                  ),
-                );
-              },
-            ),
-            ValueListenableBuilder<int>(
-              valueListenable: SyncService.instance.pendingCount,
-              builder: (context, pending, child) {
-                if (pending == 0) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.cloud_off_rounded,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '$pending verification${pending == 1 ? '' : 's'} '
-                            'pending sync. Will upload automatically when online.',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'Quick actions',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 1.3,
-              children: [
-                _QuickActionCard(
-                  icon: Icons.fact_check_outlined,
-                  label: 'Start Verification',
-                  onTap: () =>
-                      _open(context, const AssignedAddressesScreen()),
-                ),
-                _QuickActionCard(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Profile',
-                  onTap: () => _open(context, const ProfileScreen()),
-                ),
-                _QuickActionCard(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Activity',
-                  onTap: () => _open(
-                    context,
-                    const VerificationListScreen(title: 'Activity'),
-                  ),
-                ),
-                _QuickActionCard(
-                  icon: Icons.insights_rounded,
-                  label: 'Reports',
-                  onTap: () => _open(
-                    context,
-                    const VerifiedAddressesScreen(),
-                  ),
-                ),
-                _QuickActionCard(
-                  icon: Icons.favorite_border_rounded,
-                  label: 'Favorites',
-                  onTap: () => _open(
-                    context,
-                    const VerificationListScreen(
-                      title: 'Favorites',
-                      favoritesOnly: true,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
+class _StatsRow extends StatelessWidget {
+  final int assigned;
+  final int completed;
+
+  const _StatsRow({required this.assigned, required this.completed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            icon: Icons.assignment_outlined,
+            label: 'Received',
+            count: assigned,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.task_alt_rounded,
+            label: 'Completed',
+            count: completed,
+            color: Colors.green,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final int count;
+  final Color color;
 
-  const _QuickActionCard({
+  const _StatCard({
     required this.icon,
     required this.label,
-    required this.onTap,
+    required this.count,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: theme.colorScheme.primary, size: 24),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 12),
+          Text(
+            '$count',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingBanner extends StatelessWidget {
+  final int pending;
+
+  const _PendingBanner({required this.pending});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: Colors.orange, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$pending verification${pending == 1 ? '' : 's'} pending sync. '
+              'Will upload automatically when online.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: theme.colorScheme.outline),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ],
         ),
       ),
     );

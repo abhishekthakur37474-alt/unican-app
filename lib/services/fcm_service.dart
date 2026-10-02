@@ -79,7 +79,7 @@ class FcmService {
   }
 
   static void openAlertsTab() {
-    AppSettings.instance.homeTabIndex.value = 1;
+    NotificationRouter.instance.openNotifications();
     AppSettings.instance.alertsRefreshTick.value++;
   }
 
